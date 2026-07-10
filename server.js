@@ -28,6 +28,13 @@ app.get('/api/update', (req, res) => {
   });
 });
 
+// Force calendar sync
+app.get('/api/sync', async (req, res) => {
+  lastCalendarSync = 0;
+  try { await syncCalendar(); res.json({ ok: true, count: events.length, names: events.map(e => e.name).slice(-20) }); }
+  catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // Dummy user management API
 app.get('/api/dummy-users', (req, res) => { res.json(demoUsers); });
 app.post('/api/dummy-users', (req, res) => {
