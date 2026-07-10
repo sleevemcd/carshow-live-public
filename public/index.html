@@ -78,6 +78,12 @@ input,textarea{outline:none}
 <div class="login-card">
 <h1>CarShow</h1>
 <p class="subtitle">Live Event Map</p>
+<div class="code-section">
+<p>Event code (optional)</p>
+<div class="code-row">
+<input type="text" id="loginCode" placeholder="Enter code if you have one" maxlength="10" autocomplete="off" />
+</div>
+</div>
 <input type="email" id="loginEmail" placeholder="Enter your email" autocomplete="off" />
 <button id="loginBtn" class="btn-primary">Join Event</button>
 <div id="loginError" class="error"></div>
@@ -91,12 +97,6 @@ input,textarea{outline:none}
 <button class="btn-outline btn-sm login-vip">VIP</button>
 <button class="btn-outline btn-sm login-registered_user">Registered</button>
 <button class="btn-outline btn-sm login-user">Attendee</button>
-</div>
-</div>
-<div class="code-section">
-<p>Event code (optional)</p>
-<div class="code-row">
-<input type="text" id="loginCode" placeholder="Enter code if you have one" maxlength="10" autocomplete="off" />
 </div>
 </div>
 </div>
@@ -237,6 +237,8 @@ function initMap(){
 function initControls(){
   var role=currentUser?.role;
   $('#backBtn').addEventListener('click',goBack);
+  hide($('#adminPanelBtn'));
+  hide($('#adminPanel'));
   if(role==='admin'){
     show($('#adminPanelBtn'));
     $('#adminPanelBtn').addEventListener('click',toggleAdmin);
