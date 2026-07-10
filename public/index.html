@@ -129,6 +129,7 @@ input,textarea{outline:none}
 <div id="vendorPopup">
 <h3 id="vpName"></h3><div class="desc" id="vpDesc"></div>
 <div class="tags" id="vpTags"></div>
+<button id="vpFollowBtn" class="btn-outline btn-sm" style="width:100%;margin-bottom:6px">+ Follow</button>
 <button class="btn-outline btn-sm close" id="closeVendorPopup">Close</button>
 </div>
 <div id="shareBar">
@@ -208,7 +209,7 @@ input,textarea{outline:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
-let map, currentUser=null, currentEvent=null, heatLayer=null;
+let map, currentUser=null, currentEvent=null, heatLayer=null, currentVendor=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
 let showingNearby=false, locationWatchId=null, myLocation=null;
 
@@ -289,6 +290,15 @@ function initControls(){
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
   });
   $('#closeVendorPopup').addEventListener('click',()=>hide($('#vendorPopup')));
+  $('#vpFollowBtn').addEventListener('click',function(){
+    if(!currentVendor||!currentUser)return;
+    var btn=this;
+    if(btn.textContent.includes('Unfollow')){
+      fetch('/api/unfollow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentVendor.user_id})}).then(()=>{updateFollowBtn()});
+    }else{
+      fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentVendor.user_id})}).then(()=>{updateFollowBtn()});
+    }
+  });
   $('#saveSpotBtn').addEventListener('click',saveSpot);
   $('#cancelSpotBtn').addEventListener('click',()=>hide($('#spotModal')));
   $('#saveVendorBtn').addEventListener('click',saveVendor);
@@ -321,7 +331,7 @@ function initControls(){
 }
 
 function loadVendors(){fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));vendorMarkers={};list.forEach(addVendorMarker)})}
-function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4);overflow:hidden"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map).bindPopup('<b>'+esc(v.business_name)+'</b><br>'+esc(v.description)+(v.tags?.length?'<br><small>'+v.tags.map(t=>'#'+t).join(' ')+'</small>':''));m.on('click',()=>{$('#vpName').textContent=v.business_name;$('#vpDesc').textContent=v.description;$('#vpTags').innerHTML=(v.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('');show($('#vendorPopup'))});vendorMarkers[v.id]=m}
+function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4);overflow:hidden"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map).bindPopup('<b>'+esc(v.business_name)+'</b><br>'+esc(v.description)+(v.tags?.length?'<br><small>'+v.tags.map(t=>'#'+t).join(' ')+'</small>':''));m.on('click',()=>{$('#vpName').textContent=v.business_name;$('#vpDesc').textContent=v.description;$('#vpTags').innerHTML=(v.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('');currentVendor=v;updateFollowBtn();show($('#vendorPopup'))});vendorMarkers[v.id]=m}
 function loadSpots(){fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
 function addSpotMarker(s){var isCar=s.spot_type==='car_spot';var isFood=s.spot_type==='food';var icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':isFood?'#ef4444':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':isFood?'#fca5a5':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':isFood?'🍔':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});var m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>');m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST'}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+d.likes+'</small>')})});spotMarkers[s.id]=m}
 
@@ -463,6 +473,14 @@ function loadNotifs(){
   });
 }
 function dismissNotif(key){fetch('/api/notifications/'+key,{method:'DELETE'}).then(()=>{loadNotifs();pollNotifs()})}
+function updateFollowBtn(){
+  if(!currentVendor||!currentUser)return;
+  fetch('/api/follows/'+currentUser.username).then(r=>r.json()).then(list=>{
+    var f=list.includes(currentVendor.user_id);
+    $('#vpFollowBtn').textContent=f?'✓ Following':'+ Follow';
+    $('#vpFollowBtn').style.color=f?'#22c55e':'';
+  });
+}
 window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
 window.addEventListener('load',initLogin);

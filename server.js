@@ -222,6 +222,7 @@ app.get('/api/notifications', (req, res) => { res.json(notifications.slice(0, 50
 app.delete('/api/notifications/:key', (req, res) => { var i=notifications.findIndex(n=>n.key===req.params.key);if(i>=0)notifications.splice(i,1);res.json({success:true}); });
 app.delete('/api/notifications', (req, res) => { notifications.length=0;res.json({success:true}); });
 app.post('/api/follow', (req, res) => { var {username,follow}=req.body;if(!username||!follow)return res.status(400).json({error:'required'});if(!follows[username])follows[username]=[];if(!follows[username].includes(follow))follows[username].push(follow);res.json({following:follows[username]})});
+app.post('/api/unfollow', (req, res) => { var {username,follow}=req.body;if(follows[username])follows[username]=follows[username].filter(f=>f!==follow);res.json({following:follows[username]||[]})});
 app.get('/api/follows/:username', (req, res) => { res.json(follows[req.params.username]||[]); });
 
 module.exports = app;
