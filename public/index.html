@@ -330,7 +330,7 @@ function initControls(){
 }
 
 function loadVendors(){fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));vendorMarkers={};list.forEach(addVendorMarker)})}
-function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4);overflow:hidden"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map);m.on('click',()=>{currentFollowTarget={name:v.business_name||v.user_id,desc:v.description||'',type:'vendor',id:v.user_id};showInfoPopup()});vendorMarkers[v.id]=m}
+function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4)"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map);m.bindPopup('<div style="min-width:180px"><b>'+esc(v.business_name)+'</b><br><span style="color:#a1a1aa;font-size:12px">'+esc(v.description)+'</span>'+'<br><button id="popupFollow_'+v.user_id+'" class="btn-outline btn-sm" style="margin-top:8px;width:100%;font-size:11px;padding:4px" onclick="toggleFollow(\''+v.user_id+'\',\''+esc(v.business_name)+'\',\'vendor\')">+ Follow</button></div>');m.on('click',function(){setTimeout(function(){updateFollowBtnUI(v.user_id)},50)});vendorMarkers[v.id]=m}
 function loadSpots(){fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
 function addSpotMarker(s){var isCar=s.spot_type==='car_spot';var isFood=s.spot_type==='food';var icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':isFood?'#ef4444':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':isFood?'#fca5a5':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':isFood?'🍔':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});var m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>');m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST'}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+d.likes+'</small>')})});spotMarkers[s.id]=m}
 
@@ -367,7 +367,7 @@ function pollUsers(){
         var c=rc[u.role]||'#6366f1';
         var isVip=u.role==='vip';
         var icon=L.divIcon({className:'',html:'<div style="width:'+(isVip?36:40)+'px;height:'+(isVip?36:40)+'px;border-radius:'+(isVip?'50%':'10px')+';background:#18181b;border:2px solid '+c+';display:flex;align-items:center;justify-content:center;font-size:'+(isVip?18:20)+'px;box-shadow:0 0 8px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div>'+(isVip?'👤':(u.role==='vendor'?'🏪':'⭐'))+'</div>',iconSize:[isVip?36:40,isVip?36:40],iconAnchor:[isVip?18:20,isVip?18:20]});
-        if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else{var um=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map);um.on('click',function(){currentFollowTarget={name:u.username,desc:u.role.replace(/_/g,' '),type:u.role,id:u.username};showInfoPopup()});userMarkers[u.username]=um}
+        if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else{var um=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map);var rn=u.role.replace(/_/g,' ');um.bindPopup('<div style="min-width:160px"><b>'+esc(u.username)+'</b><br><span style="color:#a1a1aa;font-size:12px">'+rn+'</span><br><button id="popupFollow_'+u.username+'" class="btn-outline btn-sm" style="margin-top:8px;width:100%;font-size:11px;padding:4px" onclick="toggleFollow(\''+u.username+'\',\''+esc(u.username)+'\',\''+u.role+'\')">+ Follow</button></div>');um.on('click',function(){setTimeout(function(){updateFollowBtnUI(u.username)},50)});userMarkers[u.username]=um}
       }
     });
     if(heatLayer&&heatPoints.length)heatLayer.setLatLngs(heatPoints);
@@ -503,6 +503,24 @@ function loadEventMarkers(){
         }
       }
     });
+  });
+}
+window.toggleFollow=function(id,name,type){
+  if(!currentUser)return;
+  fetch('/api/follows/'+currentUser.username).then(r=>r.json()).then(list=>{
+    if(list.includes(id)){
+      fetch('/api/unfollow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:id})}).then(()=>updateFollowBtnUI(id));
+    }else{
+      fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:id})}).then(()=>updateFollowBtnUI(id));
+    }
+  });
+}
+function updateFollowBtnUI(id){
+  if(!currentUser)return;
+  fetch('/api/follows/'+currentUser.username).then(r=>r.json()).then(list=>{
+    var f=list.includes(id);
+    var btn=document.getElementById('popupFollow_'+id);
+    if(btn){btn.textContent=f?'✓ Following':'+ Follow';btn.style.color=f?'#22c55e':''}
   });
 }
 window.dismissNotif=dismissNotif;
