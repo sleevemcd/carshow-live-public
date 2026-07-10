@@ -260,7 +260,7 @@ function initMap(){
     L.tileLayer(tileUrl,{maxZoom:19}).addTo(map);
     L.marker([ev.lat,ev.lng],{icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6)"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
     setupHeatmap();
-    loadVendors();loadSpots();setupLocation();setupPolling();initControls();loadEventMarkers();pollUsers();
+    setupHeatmap();loadVendors();loadSpots();setupLocation();setupPolling();initControls();loadEventMarkers();pollUsers();pollVendors();pollSpots();
   }catch(e){showError('Map error: '+e.message)}
 }
 
@@ -351,7 +351,7 @@ function setupLocation(){
 }
 function useDefaultLocation(){var l={lat:currentEvent.lat,lng:currentEvent.lng+0.001};myLocation=l;updateMyMarker(l);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...l,event_id:currentEvent.id})})}
 function setupHeatmap(){if(typeof L.heatLayer!=='function')return;heatLayer=L.heatLayer([],{radius:30,blur:20,maxZoom:10,max:4,gradient:{0.2:'#4f46e5',0.4:'#6366f1',0.6:'#22c55e',0.8:'#f59e0b',1:'#ef4444'}}).addTo(map)}
-function setupPolling(){pollingTimers.push(setInterval(pollUsers,5000));pollingTimers.push(setInterval(pollVendors,10000));pollingTimers.push(setInterval(pollSpots,10000))}
+function setupPolling(){pollingTimers.push(setInterval(pollUsers,3000));pollingTimers.push(setInterval(pollVendors,5000));pollingTimers.push(setInterval(pollSpots,5000))}
 function pollUsers(){
   if(!currentEvent)return;
   fetch('/api/users/'+currentEvent.id).then(r=>r.json()).then(list=>{
