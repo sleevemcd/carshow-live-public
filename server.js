@@ -66,24 +66,41 @@ async function syncCalendar() {
     }
     calEvents.forEach(ce => {
       if (!ce.name) return;
-      const existing = events.find(e => e.name === ce.name && e.start_date && new Date(e.start_date).toISOString().slice(0,10) === (ce.dtstart||'').slice(0,10));
-      if (!existing) {
-        events.push({
-          id: 'cal-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
-          organizer_id: 'google-calendar',
-          access_code: '',
-          name: ce.name,
-          description: ce.desc || '',
-          location_name: ce.loc || '',
-          lat: 40.5144, lng: -111.4764,
-          radius_meters: 2000,
-          start_date: ce.dtstart || new Date().toISOString(),
-          end_date: ce.dtend || new Date(Date.now()+86400000*3).toISOString(),
-          is_active: true,
-          parent_event_id: 'demo-event-1',
-          created_at: new Date().toISOString()
-        });
+      const existing = events.find(e => e.name === ce.name);
+      if (existing) return;
+      
+      let parentId = undefined;
+      let cleanDesc = ce.desc || '';
+      
+      if (cleanDesc.includes('type: master')) {
+        parentId = undefined;
+        cleanDesc = cleanDesc.replace(/type:\s*master\s*/i, '').trim();
+      } else {
+        const parentMatch = cleanDesc.match(/parent:\s*(.+?)(?:\n|$)/i);
+        if (parentMatch) {
+          const parent = events.find(e => e.name.toLowerCase() === parentMatch[1].trim().toLowerCase());
+          if (parent) parentId = parent.id;
+          cleanDesc = cleanDesc.replace(/parent:\s*.+/i, '').trim();
+        }
       }
+      
+      if (!parentId) parentId = 'demo-event-1';
+      
+      events.push({
+        id: 'cal-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+        organizer_id: 'google-calendar',
+        access_code: '',
+        name: ce.name,
+        description: cleanDesc,
+        location_name: ce.loc || '',
+        lat: 40.5144, lng: -111.4764,
+        radius_meters: 2000,
+        start_date: ce.dtstart || new Date().toISOString(),
+        end_date: ce.dtend || new Date(Date.now()+86400000*3).toISOString(),
+        is_active: true,
+        parent_event_id: parentId,
+        created_at: new Date().toISOString()
+      });
     });
   } catch(e) { console.log('Calendar sync error:', e.message); }
 }
