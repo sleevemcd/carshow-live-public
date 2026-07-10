@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CarShow — Live Event Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <h1>CarShow</h1>
+      <p class="subtitle">Live Event Map</p>
+      <input type="text" id="loginInput" placeholder="Enter a username" maxlength="20" autocomplete="off" />
+      <button id="loginBtn" class="btn-primary">Join as Attendee</button>
+      <div id="loginError" class="error"></div>
+
+      <div class="demo-section">
+        <p>Demo — Quick Sign In</p>
+        <div class="demo-roles">
+          <button class="btn-outline btn-sm login-admin">Admin</button>
+          <button class="btn-outline btn-sm login-organizer">Organizer</button>
+          <button class="btn-outline btn-sm login-vendor">Vendor</button>
+          <button class="btn-outline btn-sm login-attendee">Attendee</button>
+        </div>
+      </div>
+
+      <div class="code-section">
+        <p>Have an event code?</p>
+        <div class="code-row">
+          <input type="text" id="codeInput" placeholder="e.g. WEF2026" maxlength="10" autocomplete="off" />
+          <button class="btn-outline btn-sm" onclick="handleCodeLogin()">Go</button>
+        </div>
+        <div class="code-hint" id="codeSection">Codes: WEF2026, CRUISE, MEET</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app">
+    <div id="map"></div>
+
+    <div id="header">
+      <div>
+        <h1 id="eventId">Loading...</h1>
+        <div class="event-loc" id="eventLoc"></div>
+      </div>
+      <button id="adminPanelBtn" class="btn-outline btn-sm" style="display:none;">☰ Admin</button>
+    </div>
+
+    <div id="controls">
+      <button id="nearbyBtn" title="People nearby">👥</button>
+      <button id="locateBtn" title="My location">◎</button>
+      <button id="addVendorBtn" title="Add vendor" style="display:none;">🏪</button>
+      <button id="adminBtn" title="Admin panel" style="display:none;">⚙</button>
+    </div>
+
+    <div id="vendorPopup">
+      <h3 id="vpName"></h3>
+      <div class="desc" id="vpDesc"></div>
+      <div class="tags" id="vpTags"></div>
+      <button class="btn-outline btn-sm close" id="closeVendorPopup">Close</button>
+    </div>
+
+    <div id="shareBar">
+      <button id="shareBtn">📍 Drop Pin</button>
+      <div class="switch-row">
+        <input type="checkbox" id="locationToggle" checked />
+        <span>Share location</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="adminPanel">
+    <div class="panel-header">
+      <h2>Event Management</h2>
+      <button id="closeAdmin" class="btn-outline btn-sm">✕</button>
+    </div>
+    <button id="newEventBtn" class="btn-primary btn-sm new-btn">+ New Event</button>
+    <div id="eventList"></div>
+  </div>
+
+  <!-- SPOT MODAL -->
+  <div class="modal-overlay" id="spotModal" style="display:none;">
+    <div class="modal">
+      <h2>Drop a Pin</h2>
+      <label>Type</label>
+      <select id="spotType">
+        <option value="spot">📍 Spot (24hr)</option>
+        <option value="car_spot">🚗 Car Spot (30min)</option>
+      </select>
+      <label>Label</label>
+      <input type="text" id="spotLabel" placeholder="e.g. Best photo spot" maxlength="80" />
+      <label>Description</label>
+      <textarea id="spotDesc" placeholder="Add some details..." maxlength="200"></textarea>
+      <div class="btn-row">
+        <button id="cancelSpotBtn" class="btn-outline">Cancel</button>
+        <button id="saveSpotBtn" class="btn-primary">Drop Pin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VENDOR MODAL -->
+  <div class="modal-overlay" id="vendorModal" style="display:none;">
+    <div class="modal">
+      <h2>Add Vendor</h2>
+      <label>Business Name</label>
+      <input type="text" id="vendorName" placeholder="e.g. Prestige Wheels" />
+      <label>Description</label>
+      <textarea id="vendorDesc" placeholder="What they offer..."></textarea>
+      <label>Lat / Lng (auto-filled from map center)</label>
+      <div style="display:flex;gap:8px;">
+        <input type="number" id="vendorLat" step="any" placeholder="Lat" />
+        <input type="number" id="vendorLng" step="any" placeholder="Lng" />
+      </div>
+      <div class="btn-row">
+        <button id="cancelVendorBtn" class="btn-outline">Cancel</button>
+        <button id="saveVendorBtn" class="btn-primary">Add Vendor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT MODAL -->
+  <div class="modal-overlay" id="eventModal" style="display:none;">
+    <div class="modal">
+      <h2 id="eventTitle">New Event</h2>
+      <label>Name</label>
+      <input type="text" id="evName" placeholder="e.g. Wasatch Euro Fest" />
+      <label>Description</label>
+      <textarea id="evDesc" placeholder="Event description..."></textarea>
+      <label>Location Name</label>
+      <input type="text" id="evLoc" placeholder="City, State" />
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;"><label>Lat</label><input type="number" id="evLat" step="any" placeholder="40.5144" /></div>
+        <div style="flex:1;"><label>Lng</label><input type="number" id="evLng" step="any" placeholder="-111.4764" /></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;"><label>Radius (m)</label><input type="number" id="evRadius" value="2000" /></div>
+        <div style="flex:1;"><label>Access Code</label><input type="text" id="evCode" placeholder="e.g. WEF2027" /></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <input type="checkbox" id="evActive" checked /> Active
+      </label>
+      <div class="btn-row">
+        <button id="cancelEventBtn" class="btn-outline">Cancel</button>
+        <button id="saveEventBtn" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
