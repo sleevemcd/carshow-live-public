@@ -104,7 +104,10 @@ input,textarea{outline:none}
 <div id="app" style="display:none">
 <div id="map"></div>
 <div id="header">
+<div style="display:flex;align-items:center;gap:10px">
+<button id="backBtn" style="background:none;border:none;color:#a1a1aa;font-size:18px;cursor:pointer;padding:0">←</button>
 <div><h1 id="eventId">Loading...</h1><div class="event-loc" id="eventLoc"></div></div>
+</div>
 <button id="adminPanelBtn" class="btn-outline btn-sm" style="display:none">☰ Admin</button>
 </div>
 <div id="controls">
@@ -228,6 +231,7 @@ function initMap(){
 
 function initControls(){
   const role=currentUser?.role;
+  $('#backBtn').addEventListener('click',logout);
   if(role==='admin'){
     show($('#adminBtn'));show($('#adminPanelBtn'));
     $('#adminBtn').addEventListener('click',toggleAdmin);
@@ -271,6 +275,15 @@ window.openEventModalById=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=
 window.deleteEventById=id=>{if(confirm('Delete?'))fetch('/api/events/'+id,{method:'DELETE'}).then(()=>loadAdminPanel())};
 window.switchToEvent=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;map.setView([e.lat,e.lng],16);loadVendors();loadSpots();hide($('#adminPanel'))});
 function toggleAdmin(){const p=$('#adminPanel');p.style.display=p.style.display==='none'?'':'none';loadAdminPanel()}
+function logout(){
+  if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
+  pollingTimers.forEach(clearInterval);
+  if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);
+  if(map){Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}
+  userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;
+  currentUser=null;currentEvent=null;map=null;
+  hide($('#app'));show($('#loginScreen'));
+}
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
 window.addEventListener('load',initLogin);
 </script>
