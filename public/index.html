@@ -428,7 +428,7 @@ function loadEventHQ(){
 function updateCountdown(){
   if(!currentEvent){return}
   var target=new Date(currentEvent.start_date).getTime();
-  if(currentUser.role==='organizer'&&currentEvent.roll_in_time){target=new Date(currentEvent.roll_in_time).getTime()-3600000}
+  if(currentEvent.roll_in_time&&(currentUser.role==='organizer'||currentUser.role==='vendor'||currentUser.role==='sponsor')){target=new Date(currentEvent.roll_in_time).getTime()-3600000}
   else if(currentEvent.roll_in_time&&(currentUser.role==='registered_user'||currentUser.role==='vip')){target=new Date(currentEvent.roll_in_time).getTime()}
   var diff=target-Date.now();
   if(diff<=0){$('#hqTimer').textContent='LIVE NOW';return}

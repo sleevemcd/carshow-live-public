@@ -71,6 +71,11 @@ async function syncCalendar() {
       
       let parentId = undefined;
       let cleanDesc = ce.desc || '';
+      let rollIn = undefined, showStart = undefined;
+      let rim = cleanDesc.match(/roll_in:\s*(.+)/i);
+      if (rim) { rollIn = new Date(rim[1].trim()).toISOString(); cleanDesc = cleanDesc.replace(/roll_in:\s*.+/i,'').trim(); }
+      let ssm = cleanDesc.match(/show_start:\s*(.+)/i);
+      if (ssm) { showStart = new Date(ssm[1].trim()).toISOString(); cleanDesc = cleanDesc.replace(/show_start:\s*.+/i,'').trim(); }
       
       if (cleanDesc.includes('type: master')) {
         parentId = undefined;
@@ -95,7 +100,8 @@ async function syncCalendar() {
         location_name: ce.loc || '',
         lat: 40.5144, lng: -111.4764,
         radius_meters: 2000,
-        start_date: ce.dtstart || new Date().toISOString(),
+        start_date: showStart || ce.dtstart || new Date().toISOString(),
+        roll_in_time: rollIn || undefined,
         end_date: ce.dtend || new Date(Date.now()+86400000*3).toISOString(),
         is_active: true,
         parent_event_id: parentId,
