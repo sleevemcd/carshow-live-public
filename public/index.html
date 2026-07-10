@@ -239,7 +239,7 @@ function initControls(){
   if(role==='admin'){
     
     show($('#adminPanelBtn'));
-    
+    $('#adminPanelBtn').addEventListener('click',toggleAdmin);
     $('#closeAdmin').addEventListener('click',()=>hide($('#adminPanel')));
     $('#newEventBtn').addEventListener('click',openEventModal);
     $('#addVendorAdminBtn').addEventListener('click',openVendorModal);
