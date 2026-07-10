@@ -101,6 +101,7 @@ input,textarea{outline:none}
 </div>
 </div>
 
+<div id="dashboardView" style="display:none;position:fixed;inset:0;background:#09090b;overflow-y:auto;z-index:500"><div style="max-width:640px;margin:0 auto;padding:20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div><h1 style="font-size:24px;font-weight:700">Admin Dashboard</h1><p style="color:#71717a;font-size:14px" id="dashRole"></p></div><button id="dashLogoutBtn" class="btn-outline btn-sm">Logout</button></div><div style="display:flex;gap:8px;margin-bottom:20px"><button id="dashNewEventBtn" class="btn-primary btn-sm" style="flex:1">+ New Event</button><button id="dashAddVendorBtn" class="btn-outline btn-sm" style="flex:1">+ Add Vendor</button></div><div style="font-size:12px;color:#71717a;margin-bottom:16px" id="dashEventCount"></div><div id="dashEventList"></div></div></div>
 <div id="app" style="display:none">
 <div id="map"></div>
 <div id="header">
@@ -190,8 +191,8 @@ function handleLogin(role){
     if(data.error){$('#loginError').textContent=data.error;return}
     currentUser={username:data.username,role:data.role,event_id:data.event.id};
     currentEvent=data.event;
-    hide($('#loginScreen'));show($('#app'));
-    initMap();
+    hide($('#loginScreen'));
+    if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}else{show($('#app'));initMap()}
   }).catch(()=>{$('#loginError').textContent='Login failed'});
 }
 
@@ -287,15 +288,23 @@ function loadAdminPanel(){fetch('/api/events').then(r=>r.json()).then(list=>{$('
 window.openEventModalById=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>openEventModal(e));
 window.deleteEventById=id=>{if(confirm('Delete?'))fetch('/api/events/'+id,{method:'DELETE'}).then(()=>loadAdminPanel())};
 window.switchToEvent=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;map.setView([e.lat,e.lng],16);loadVendors();loadSpots();hide($('#adminPanel'))});
-function toggleAdmin(){const p=$('#adminPanel');p.style.display=p.style.display==='none'?'':'none';loadAdminPanel()}
+function toggleAdmin(){const p=$('#adminPanel');p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';if(p.style.display==='block')loadAdminPanel()}
+function loadDashboardEvents(){fetch('/api/events').then(r=>r.json()).then(list=>{$('#dashEventCount').textContent=list.length+' events';$('#dashEventList').innerHTML=list.map(e=>'<div class="event-item"><h3>'+esc(e.name)+(e.is_active?'':' <span style="color:#f87171;font-size:11px">(inactive)</span>')+'</h3><div class="meta">'+esc(e.location_name)+' · code: '+esc(e.access_code||'')+(e.child_count?' · '+e.child_count+' sub-events':'')+'</div><div class="actions"><button class="btn-outline btn-sm" onclick="openEventModalById(\''+e.id+'\')">Edit</button><button class="btn-danger btn-sm" onclick="deleteEventById(\''+e.id+'\')">Delete</button><button class="btn-outline btn-sm" onclick="switchToEventFromDash(\''+e.id+'\')">View Map</button></div></div>').join('')||'<p style="padding:16px;color:#71717a">No events</p>'})}
+function initDashboardControls(){$('#dashRole').textContent='Signed in as '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',logout);$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',()=>{show($('#dashboardView'));hide($('#dashboardView'));openVendorModal();show($('#dashboardView'))})}
+window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#app'));initMap()});
 function logout(){
-  if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
+  if(currentUser){
+    if(currentUser.role==='admin'){
+      hide($('#app'));show($('#dashboardView'));loadDashboardEvents();return;
+    }
+    fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
+  }
   pollingTimers.forEach(clearInterval);
   if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);
   if(map){Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}
   userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;
   currentUser=null;currentEvent=null;map=null;
-  hide($('#app'));show($('#loginScreen'));
+  hide($('#app'));hide($('#dashboardView'));show($('#loginScreen'));
 }
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
 window.addEventListener('load',initLogin);
