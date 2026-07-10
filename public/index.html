@@ -113,7 +113,6 @@ input,textarea{outline:none}
 <div id="controls">
 <button id="nearbyBtn" title="Show/hide people nearby">👥 People</button>
 <button id="locateBtn" title="Jump to my location">◎ My Location</button>
-<button id="addVendorBtn" title="Add a vendor booth" style="display:none">🏪 Add Vendor</button>
 <button id="adminBtn" title="Open admin panel" style="display:none">⚙ Admin</button>
 </div>
 <div id="vendorPopup">
@@ -128,8 +127,14 @@ input,textarea{outline:none}
 </div>
 
 <div id="adminPanel">
-<div class="panel-header"><h2>Event Management</h2><button id="closeAdmin" class="btn-outline btn-sm">✕</button></div>
-<button id="newEventBtn" class="btn-primary btn-sm new-btn">+ New Event</button>
+<div class="panel-header"><h2>Admin Dashboard</h2><button id="closeAdmin" class="btn-outline btn-sm">✕</button></div>
+<div style="padding:12px 16px;display:flex;gap:8px">
+<button class="btn-primary btn-sm" id="newEventBtn" style="flex:1">+ New Event</button>
+<button class="btn-outline btn-sm" id="addVendorAdminBtn" style="flex:1">+ Add Vendor</button>
+</div>
+<div style="padding:0 16px 12px;font-size:12px;color:#71717a">
+<span id="adminEventCount"></span> events · <a href="#" onclick="event.preventDefault();loadAdminPanel()" style="color:#a5b4fc">refresh</a>
+</div>
 <div id="eventList"></div>
 </div>
 
@@ -233,16 +238,19 @@ function initControls(){
   const role=currentUser?.role;
   $('#backBtn').addEventListener('click',logout);
   if(role==='admin'){
-    show($('#adminBtn'));show($('#adminPanelBtn'));
+    show($('#adminBtn'));
+    show($('#adminPanelBtn'));
     $('#adminBtn').addEventListener('click',toggleAdmin);
     $('#closeAdmin').addEventListener('click',()=>hide($('#adminPanel')));
     $('#newEventBtn').addEventListener('click',openEventModal);
+    $('#addVendorAdminBtn').addEventListener('click',openVendorModal);
     loadAdminPanel();
+    show($('#adminPanel'));
   }
-  if(role==='vendor'||role==='admin'){show($('#addVendorBtn'));$('#addVendorBtn').addEventListener('click',openVendorModal)}
+  
   $('#shareBtn').addEventListener('click',openSpotModal);
   $('#nearbyBtn').addEventListener('click',toggleNearby);
-  $('#locateBtn').addEventListener('click',()=>{map.locate({setView:true,maxZoom:16})});
+  $('#locateBtn').addEventListener('click',()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{map.setView([p.coords.latitude,p.coords.longitude],16)},()=>{showError('Could not get your location. Check browser permissions.')});else showError('Geolocation not supported')});
   $('#locationToggle').addEventListener('change',e=>{fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})})});
   $('#closeVendorPopup').addEventListener('click',()=>hide($('#vendorPopup')));
   $('#saveSpotBtn').addEventListener('click',saveSpot);
@@ -261,7 +269,7 @@ function setupLocation(){if(!navigator.geolocation)return;locationWatchId=naviga
 function updateMyMarker(loc){
   const isFirst = !userMarkers._me;
   if(userMarkers._me)map.removeLayer(userMarkers._me);
-  const icon=L.divIcon({className:'',html:'<div style="width:20px;height:20px;border-radius:50%;background:#6366f1;border:3px solid #fff;box-shadow:0 0 12px rgba(99,102,241,0.8)"></div>',iconSize:[20,20],iconAnchor:[10,10]});
+  const icon=L.divIcon({className:'',html:'<div style="width:22px;height:22px;border-radius:50%;background:#6366f1;border:3px solid #fff;box-shadow:0 0 12px rgba(99,102,241,0.8);position:relative"><div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:#a5b4fc;white-space:nowrap;font-weight:600">YOU</div></div>',iconSize:[22,22],iconAnchor:[11,11]});
   userMarkers._me=L.marker([loc.lat,loc.lng],{icon,zIndexOffset:1000}).addTo(map);
   if(isFirst) map.setView([loc.lat,loc.lng],14);
 }
@@ -276,7 +284,7 @@ function openVendorModal(){show($('#vendorModal'));$('#vendorName').value='';$('
 function saveVendor(){const name=$('#vendorName').value.trim();if(!name)return;const c=map.getCenter();fetch('/api/vendors',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,business_name:name,description:$('#vendorDesc').value.trim(),lat:parseFloat($('#vendorLat').value)||c.lat,lng:parseFloat($('#vendorLng').value)||c.lng,tags:[],user_id:currentUser?.username||'anon'})}).then(()=>pollVendors());hide($('#vendorModal'))}
 function openEventModal(ev){show($('#eventModal'));$('#eventTitle').textContent=ev?'Edit Event':'New Event';$('#evName').value=ev?ev.name:'';$('#evDesc').value=ev?ev.description:'';$('#evLoc').value=ev?ev.location_name:'';$('#evLat').value=ev?ev.lat:'';$('#evLng').value=ev?ev.lng:'';$('#evCode').value=ev?ev.access_code:'';$('#evRadius').value=ev?ev.radius_meters:2000;$('#evActive').checked=ev?ev.is_active:true;$('#saveEventBtn').dataset.editId=ev?ev.id:''}
 function saveEvent(){const data={name:$('#evName').value.trim(),description:$('#evDesc').value.trim(),location_name:$('#evLoc').value.trim(),lat:parseFloat($('#evLat').value)||40.5144,lng:parseFloat($('#evLng').value)||-111.4764,radius_meters:parseInt($('#evRadius').value)||2000,access_code:$('#evCode').value.trim()||undefined,is_active:$('#evActive').checked};if(!data.name)return;const eid=$('#saveEventBtn').dataset.editId;const m=eid?'PUT':'POST';const u=eid?'/api/events/'+eid:'/api/events';fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#eventModal'));loadAdminPanel()})}
-function loadAdminPanel(){fetch('/api/events').then(r=>r.json()).then(list=>{$('#eventList').innerHTML=list.map(e=>'<div class="event-item"><h3>'+esc(e.name)+(e.is_active?'':' <span style="color:#f87171;font-size:11px">(inactive)</span>')+'</h3><div class="meta">'+esc(e.location_name)+' · code: '+esc(e.access_code||'')+(e.child_count?' · '+e.child_count+' sub-events':'')+'</div><div class="actions"><button class="btn-outline btn-sm" onclick="openEventModalById(\''+e.id+'\')">Edit</button><button class="btn-danger btn-sm" onclick="deleteEventById(\''+e.id+'\')">Delete</button><button class="btn-outline btn-sm" onclick="switchToEvent(\''+e.id+'\')">View</button></div></div>').join('')||'<p style="padding:16px;color:#71717a">No events</p>'})}
+function loadAdminPanel(){fetch('/api/events').then(r=>r.json()).then(list=>{$('#adminEventCount').textContent=list.length;$('#eventList').innerHTML=list.map(e=>'<div class="event-item"><h3>'+esc(e.name)+(e.is_active?'':' <span style="color:#f87171;font-size:11px">(inactive)</span>')+'</h3><div class="meta">'+esc(e.location_name)+' · code: '+esc(e.access_code||'')+(e.child_count?' · '+e.child_count+' sub-events':'')+'</div><div class="actions"><button class="btn-outline btn-sm" onclick="openEventModalById(\''+e.id+'\')">Edit</button><button class="btn-danger btn-sm" onclick="deleteEventById(\''+e.id+'\')">Delete</button><button class="btn-outline btn-sm" onclick="switchToEvent(\''+e.id+'\')">View</button></div></div>').join('')||'<p style="padding:16px;color:#71717a">No events</p>'})}
 window.openEventModalById=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>openEventModal(e));
 window.deleteEventById=id=>{if(confirm('Delete?'))fetch('/api/events/'+id,{method:'DELETE'}).then(()=>loadAdminPanel())};
 window.switchToEvent=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;map.setView([e.lat,e.lng],16);loadVendors();loadSpots();hide($('#adminPanel'))});
