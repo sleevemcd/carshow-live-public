@@ -213,6 +213,7 @@ input,textarea{outline:none}
 <script>
 let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
+function dataEventId(){return window._dataEventId||(currentEvent?currentEvent.parent_event_id||dataEventId():'demo-event-1')}
 let showingNearby=false, locationWatchId=null, myLocation=null;
 
 const $=s=>document.querySelector(s), show=el=>el.style.display='block', hide=el=>el.style.display='none';
@@ -323,7 +324,7 @@ function initControls(){
     Object.values(vendorMarkers).forEach(m=>{var n=m.getPopup().getContent().toLowerCase();if(n.includes(q))results.push({el:m,type:'vendor'})});
     Object.values(spotMarkers).forEach(m=>{var n=m.getPopup().getContent().toLowerCase();if(n.includes(q))results.push({el:m,type:'spot'})});
     // Car search - find users with matching car
-    fetch('/api/users/'+currentEvent.id).then(resp=>resp.json()).then(ulist=>{
+    fetch('/api/users/'+dataEventId()).then(resp=>resp.json()).then(ulist=>{
       var carUsers=ulist.filter(u=>u.car&&u.car.toLowerCase().includes(q));
       if(carUsers.length){
         results.push({type:'car_hotspot',count:carUsers.length,users:carUsers});
@@ -338,9 +339,9 @@ function initControls(){
   $('#mapSearch').addEventListener('blur',function(){setTimeout(function(){$('#mapSearchResults').style.display='none'},200)});
 }
 
-function loadVendors(){fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));vendorMarkers={};list.forEach(addVendorMarker)})}
+function loadVendors(){fetch('/api/vendors/'+dataEventId()).then(r=>r.json()).then(list=>{Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));vendorMarkers={};list.forEach(addVendorMarker)})}
 function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4)"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map);m.bindPopup('<div style="min-width:180px"><b>'+esc(v.business_name)+'</b><br><span style="color:#a1a1aa;font-size:12px">'+esc(v.description)+'</span>'+'<br><button id="popupFollow_'+v.user_id+'" class="btn-outline btn-sm" style="margin-top:8px;width:100%;font-size:11px;padding:4px" onclick="toggleFollow(\''+v.user_id+'\',\''+esc(v.business_name)+'\',\'vendor\')">+ Follow</button></div>');m.on('click',function(){setTimeout(function(){updateFollowBtnUI(v.user_id)},50)});vendorMarkers[v.id]=m}
-function loadSpots(){fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
+function loadSpots(){fetch('/api/spots/'+dataEventId()).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
 function addSpotMarker(s){var isCar=s.spot_type==='car_spot';var isFood=s.spot_type==='food';var icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':isFood?'#ef4444':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':isFood?'#fca5a5':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':isFood?'🍔':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});var m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>');m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST'}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+d.likes+'</small>')})});spotMarkers[s.id]=m}
 
 function updateMyMarker(loc){
@@ -354,16 +355,16 @@ function updateMyMarker(loc){
 
 function setupLocation(){
   if(!navigator.geolocation){useDefaultLocation();return}
-  function gp(p){myLocation={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(myLocation);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...myLocation,event_id:currentEvent.id})});locationWatchId=setInterval(function(){navigator.geolocation.getCurrentPosition(function(pp){myLocation={lat:pp.coords.latitude,lng:pp.coords.longitude};updateMyMarker(myLocation)},function(){},{enableHighAccuracy:false,timeout:15000,maximumAge:60000})},30000)}
+  function gp(p){myLocation={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(myLocation);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...myLocation,event_id:dataEventId()})});locationWatchId=setInterval(function(){navigator.geolocation.getCurrentPosition(function(pp){myLocation={lat:pp.coords.latitude,lng:pp.coords.longitude};updateMyMarker(myLocation)},function(){},{enableHighAccuracy:false,timeout:15000,maximumAge:60000})},30000)}
   function tg(n){navigator.geolocation.getCurrentPosition(gp,function(){if(n>0)setTimeout(function(){tg(n-1)},5000);else useDefaultLocation()},{enableHighAccuracy:false,timeout:20000,maximumAge:0})}
   tg(2)
 }
-function useDefaultLocation(){var l={lat:currentEvent.lat,lng:currentEvent.lng+0.001};myLocation=l;updateMyMarker(l);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...l,event_id:currentEvent.id})})}
+function useDefaultLocation(){var l={lat:currentEvent.lat,lng:currentEvent.lng+0.001};myLocation=l;updateMyMarker(l);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...l,event_id:dataEventId()})})}
 function setupHeatmap(){if(typeof L.heatLayer!=='function')return;heatLayer=L.heatLayer([],{radius:30,blur:20,maxZoom:10,max:4,gradient:{0.2:'#4f46e5',0.4:'#6366f1',0.6:'#22c55e',0.8:'#f59e0b',1:'#ef4444'}}).addTo(map)}
 function setupPolling(){pollingTimers.push(setInterval(pollUsers,2000));pollingTimers.push(setInterval(pollVendors,5000));pollingTimers.push(setInterval(pollSpots,5000))}
 function pollUsers(){
   if(!currentEvent)return;
-  fetch('/api/users/'+currentEvent.id).then(r=>r.json()).then(list=>{
+  fetch('/api/users/'+dataEventId()).then(r=>r.json()).then(list=>{
     var heatPoints=[];
     var ids=new Set(list.map(u=>u.username));
     Object.keys(userMarkers).forEach(k=>{if(k!=='_me'&&!ids.has(k)){map.removeLayer(userMarkers[k]);delete userMarkers[k]}});
@@ -383,8 +384,8 @@ function pollUsers(){
   });
 }
 
-function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{var ids=new Set(list.filter(v=>v.is_active).map(v=>v.id));Object.keys(vendorMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(vendorMarkers[id]);delete vendorMarkers[id]}});list.filter(v=>v.is_active).forEach(v=>{if(vendorMarkers[v.id]){var m=vendorMarkers[v.id];if(m.getLatLng().lat!==v.lat||m.getLatLng().lng!==v.lng)m.setLatLng([v.lat,v.lng])}else addVendorMarker(v)})})}
-function pollSpots(){if(!currentEvent)return;fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{var ids=new Set(list.map(s=>s.id));Object.keys(spotMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(spotMarkers[id]);delete spotMarkers[id]}});list.forEach(s=>{if(spotMarkers[s.id]){var m=spotMarkers[s.id];if(m.getLatLng().lat!==s.lat||m.getLatLng().lng!==s.lng)m.setLatLng([s.lat,s.lng])}else addSpotMarker(s)})})}
+function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+dataEventId()).then(r=>r.json()).then(list=>{var ids=new Set(list.filter(v=>v.is_active).map(v=>v.id));Object.keys(vendorMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(vendorMarkers[id]);delete vendorMarkers[id]}});list.filter(v=>v.is_active).forEach(v=>{if(vendorMarkers[v.id]){var m=vendorMarkers[v.id];if(m.getLatLng().lat!==v.lat||m.getLatLng().lng!==v.lng)m.setLatLng([v.lat,v.lng])}else addVendorMarker(v)})})}
+function pollSpots(){if(!currentEvent)return;fetch('/api/spots/'+dataEventId()).then(r=>r.json()).then(list=>{var ids=new Set(list.map(s=>s.id));Object.keys(spotMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(spotMarkers[id]);delete spotMarkers[id]}});list.forEach(s=>{if(spotMarkers[s.id]){var m=spotMarkers[s.id];if(m.getLatLng().lat!==s.lat||m.getLatLng().lng!==s.lng)m.setLatLng([s.lat,s.lng])}else addSpotMarker(s)})})}
 
 function openSpotModal(){
   show($('#spotModal'));$('#spotLabel').value='';$('#spotDesc').value='';
@@ -393,7 +394,7 @@ function saveSpot(){
   var label=$('#spotLabel').value.trim();
   if(!label)return;
   var loc=myLocation||map.getCenter();
-  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,label,description:$('#spotDesc').value.trim(),lat:loc.lat,lng:loc.lng,spot_type:$('#spotType').value,username:currentUser?.username||'anon'})});
+  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:dataEventId(),label,description:$('#spotDesc').value.trim(),lat:loc.lat,lng:loc.lng,spot_type:$('#spotType').value,username:currentUser?.username||'anon'})});
   hide($('#spotModal'));
 }
 // spot type change updates label placeholder
@@ -405,7 +406,7 @@ $('#spotType').addEventListener('change',function(){
 })
 
 function openVendorModal(){show($('#vendorModal'));$('#vendorName').value='';$('#vendorDesc').value='';$('#vendorLat').value='';$('#vendorLng').value=''}
-function saveVendor(){var name=$('#vendorName').value.trim();if(!name)return;var c=map.getCenter();fetch('/api/vendors',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,business_name:name,description:$('#vendorDesc').value.trim(),lat:parseFloat($('#vendorLat').value)||c.lat,lng:parseFloat($('#vendorLng').value)||c.lng,tags:[],user_id:currentUser?.username||'anon'})}).then(()=>pollVendors());hide($('#vendorModal'))}
+function saveVendor(){var name=$('#vendorName').value.trim();if(!name)return;var c=map.getCenter();fetch('/api/vendors',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:dataEventId(),business_name:name,description:$('#vendorDesc').value.trim(),lat:parseFloat($('#vendorLat').value)||c.lat,lng:parseFloat($('#vendorLng').value)||c.lng,tags:[],user_id:currentUser?.username||'anon'})}).then(()=>pollVendors());hide($('#vendorModal'))}
 function openEventModal(ev){show($('#eventModal'));$('#eventTitle').textContent=ev?'Edit Event':'New Event';$('#evName').value=ev?ev.name:'';$('#evDesc').value=ev?ev.description:'';$('#evLoc').value=ev?ev.location_name:'';$('#evStart').value=ev?ev.start_date.slice(0,16):'';$('#evEnd').value=ev?ev.end_date.slice(0,16):'';$('#evRollIn').value=ev&&ev.roll_in_time?ev.roll_in_time.slice(0,16):'';$('#evLat').value=ev?ev.lat:'';$('#evLng').value=ev?ev.lng:'';$('#evCode').value=ev?ev.access_code:'';$('#evRadius').value=ev?ev.radius_meters:2000;$('#evParent').value=ev?ev.parent_event_id||'':'';$('#evActive').checked=ev?ev.is_active:true;$('#saveEventBtn').dataset.editId=ev?ev.id:''}
 function saveEvent(){var data={name:$('#evName').value.trim(),description:$('#evDesc').value.trim(),location_name:$('#evLoc').value.trim(),lat:parseFloat($('#evLat').value)||40.5144,lng:parseFloat($('#evLng').value)||-111.4764,radius_meters:parseInt($('#evRadius').value)||2000,access_code:$('#evCode').value.trim()||undefined,parent_event_id:$('#evParent').value.trim()||undefined,roll_in_time:$('#evRollIn').value?new Date($('#evRollIn').value).toISOString():undefined,start_date:new Date($('#evStart').value||Date.now()).toISOString(),end_date:new Date($('#evEnd').value||Date.now()+86400000*3).toISOString(),is_active:$('#evActive').checked};if(!data.name)return;var eid=$('#saveEventBtn').dataset.editId;var m=eid?'PUT':'POST';var u=eid?'/api/events/'+eid:'/api/events';fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#eventModal'));loadDashboardEvents();loadAdminPanel()})}
 function loadAdminPanel(){fetch('/api/events').then(r=>r.json()).then(list=>{var master=list.filter(e=>!e.parent_event_id);$('#adminEventCount').textContent=master.length;$('#eventList').innerHTML=master.map(e=>'<div class="event-item"><h3>'+esc(e.name)+(e.is_active?'':' <span style="color:#f87171;font-size:11px">(inactive)</span>')+'</h3><div class="meta">'+esc(e.location_name)+' · code: '+esc(e.access_code||'')+'</div><div class="actions"><button class="btn-outline btn-sm" onclick="switchToEventFromDash(\''+e.id+'\')">Manage</button><button class="btn-danger btn-sm" onclick="deleteEventById(\''+e.id+'\')">Delete</button></div></div>').join('')||'<p style="padding:16px;color:#71717a">No events</p>'})}
@@ -528,7 +529,7 @@ function showInfoPopup(){
   show($('#vendorPopup'));
   updateFollowBtn();
 }
-window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;map.setView([e.lat,e.lng],16);$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;var eid=e.parent_event_id||e.id;var orig=currentEvent;fetch('/api/events/'+eid).then(r=>r.json()).then(pe=>{currentEvent=pe;loadVendors();loadSpots();pollUsers();currentEvent=orig})})};
+window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;map.setView([e.lat,e.lng],16);$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;window._dataEventId=e.parent_event_id||e.id;loadVendors();loadSpots();pollUsers()})};
 window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#eventHQ'));loadEventHQ();initHQControls()})}
 function loadEventMarkers(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
