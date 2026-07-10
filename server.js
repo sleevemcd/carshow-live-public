@@ -21,6 +21,16 @@ const vendors = [
 ];
 
 const spots = [];
+const demoUsers = [
+  { username: "bmwfanatic", role: "attendee", lat: 40.5140, lng: -111.4760, event_id: "demo-event-1" },
+  { username: "porscheguy", role: "attendee", lat: 40.5135, lng: -111.4755, event_id: "demo-event-1" },
+  { username: "jdmlover", role: "attendee", lat: 40.5155, lng: -111.4765, event_id: "demo-event-1" },
+  { username: "stancebro", role: "attendee", lat: 40.5130, lng: -111.4775, event_id: "demo-event-1" },
+  { username: "v8power", role: "attendee", lat: 40.5148, lng: -111.4750, event_id: "demo-event-1" },
+  { username: "prestige_wheels", role: "vendor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1" },
+  { username: "turbokings", role: "vendor", lat: 40.5135, lng: -111.4775, event_id: "demo-event-1" },
+  { username: "carbonwerks", role: "vendor", lat: 40.5150, lng: -111.4745, event_id: "demo-event-1" },
+];
 const users = {};
 const USERS_EXPIRY_MS = 60 * 1000;
 
@@ -172,12 +182,14 @@ app.post('/api/location/toggle', (req, res) => {
 
 app.get('/api/users/:eventId', (req, res) => {
   const now = Date.now();
-  const list = Object.values(users).filter(u =>
+  const real = Object.values(users).filter(u =>
     u.event_id === req.params.eventId && u.online && u.locationEnabled && (now - u.last_seen < USERS_EXPIRY_MS)
   ).map(u => ({
     username: u.username, lat: u.lat, lng: u.lng, role: u.role
   }));
-  res.json(list);
+  const demo = demoUsers.filter(u => u.event_id === req.params.eventId)
+    .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role }));
+  res.json([...real, ...demo]);
 });
 
 if (require.main === module) {

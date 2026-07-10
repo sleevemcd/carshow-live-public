@@ -113,7 +113,6 @@ input,textarea{outline:none}
 <div id="controls">
 <button id="nearbyBtn" title="Show/hide people nearby">👥 People</button>
 <button id="locateBtn" title="Jump to my location">◎ My Location</button>
-<button id="adminBtn" title="Open admin panel" style="display:none">⚙ Admin</button>
 </div>
 <div id="vendorPopup">
 <h3 id="vpName"></h3><div class="desc" id="vpDesc"></div>
@@ -238,9 +237,9 @@ function initControls(){
   const role=currentUser?.role;
   $('#backBtn').addEventListener('click',logout);
   if(role==='admin'){
-    show($('#adminBtn'));
+    
     show($('#adminPanelBtn'));
-    $('#adminBtn').addEventListener('click',toggleAdmin);
+    
     $('#closeAdmin').addEventListener('click',()=>hide($('#adminPanel')));
     $('#newEventBtn').addEventListener('click',openEventModal);
     $('#addVendorAdminBtn').addEventListener('click',openVendorModal);
@@ -250,7 +249,7 @@ function initControls(){
   
   $('#shareBtn').addEventListener('click',openSpotModal);
   $('#nearbyBtn').addEventListener('click',toggleNearby);
-  $('#locateBtn').addEventListener('click',()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{map.setView([p.coords.latitude,p.coords.longitude],16)},()=>{showError('Could not get your location. Check browser permissions.')});else showError('Geolocation not supported')});
+  $('#locateBtn').addEventListener('click',()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{var loc={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(loc);map.setView([loc.lat,loc.lng],16)},()=>{showError('Location not available. Check browser permissions.')},{enableHighAccuracy:true,timeout:10000});else showError('Geolocation not supported')});
   $('#locationToggle').addEventListener('change',e=>{fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})})});
   $('#closeVendorPopup').addEventListener('click',()=>hide($('#vendorPopup')));
   $('#saveSpotBtn').addEventListener('click',saveSpot);
