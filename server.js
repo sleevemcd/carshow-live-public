@@ -21,15 +21,18 @@ const vendors = [
 ];
 
 const spots = [];
+const HEAT_VALUES = { admin: 0, organizer: 0, sponsor: 3, vendor: 3, vip: 4, registered_user: 2, user: 1, attendee: 1 };
+
 const demoUsers = [
-  { username: "bmwfanatic", role: "attendee", lat: 40.5140, lng: -111.4760, event_id: "demo-event-1" },
-  { username: "porscheguy", role: "attendee", lat: 40.5135, lng: -111.4755, event_id: "demo-event-1" },
-  { username: "jdmlover", role: "attendee", lat: 40.5155, lng: -111.4765, event_id: "demo-event-1" },
+  { username: "bmwfanatic", role: "registered_user", lat: 40.5140, lng: -111.4760, event_id: "demo-event-1" },
+  { username: "porscheguy", role: "vip", lat: 40.5135, lng: -111.4755, event_id: "demo-event-1" },
+  { username: "jdmlover", role: "user", lat: 40.5155, lng: -111.4765, event_id: "demo-event-1" },
   { username: "stancebro", role: "attendee", lat: 40.5130, lng: -111.4775, event_id: "demo-event-1" },
-  { username: "v8power", role: "attendee", lat: 40.5148, lng: -111.4750, event_id: "demo-event-1" },
-  { username: "prestige_wheels", role: "vendor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1" },
+  { username: "v8power", role: "registered_user", lat: 40.5148, lng: -111.4750, event_id: "demo-event-1" },
+  { username: "speedshop_ut", role: "sponsor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1" },
   { username: "turbokings", role: "vendor", lat: 40.5135, lng: -111.4775, event_id: "demo-event-1" },
   { username: "carbonwerks", role: "vendor", lat: 40.5150, lng: -111.4745, event_id: "demo-event-1" },
+  { username: "exotic_rentals", role: "sponsor", lat: 40.5142, lng: -111.4780, event_id: "demo-event-1" },
 ];
 const users = {};
 const USERS_EXPIRY_MS = 60 * 1000;
@@ -185,10 +188,10 @@ app.get('/api/users/:eventId', (req, res) => {
   const real = Object.values(users).filter(u =>
     u.event_id === req.params.eventId && u.online && u.locationEnabled && (now - u.last_seen < USERS_EXPIRY_MS)
   ).map(u => ({
-    username: u.username, lat: u.lat, lng: u.lng, role: u.role
+    username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1
   }));
   const demo = demoUsers.filter(u => u.event_id === req.params.eventId)
-    .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role }));
+    .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1 }));
   res.json([...real, ...demo]);
 });
 

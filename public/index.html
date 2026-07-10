@@ -26,7 +26,7 @@ input,textarea{outline:none}
 .login-card .error{color:#f87171;font-size:13px;margin-top:8px;min-height:20px}
 .demo-section{margin-top:20px;padding:16px;border-radius:12px;border:1px solid #312e81;background:rgba(79,70,229,0.1)}
 .demo-section p{font-size:12px;color:#a5b4fc;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
-.demo-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.demo-roles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .code-section{margin-top:12px;padding:16px;border-radius:12px;border:1px solid #27272a;background:#18181b}
 .code-section p{font-size:12px;color:#71717a;margin-bottom:8px}
 .code-row{display:flex;gap:8px}
@@ -79,15 +79,18 @@ input,textarea{outline:none}
 <h1>CarShow</h1>
 <p class="subtitle">Live Event Map</p>
 <input type="text" id="loginInput" placeholder="Enter a username (or leave blank for demo)" maxlength="20" autocomplete="off" />
-<button id="loginBtn" class="btn-primary">Join as Attendee</button>
+<button id="loginBtn" class="btn-primary">Join Event</button>
 <div id="loginError" class="error"></div>
 <div class="demo-section">
 <p>Demo — Quick Sign In</p>
 <div class="demo-roles">
 <button class="btn-outline btn-sm login-admin">Admin</button>
 <button class="btn-outline btn-sm login-organizer">Organizer</button>
+<button class="btn-outline btn-sm login-sponsor">Sponsor</button>
 <button class="btn-outline btn-sm login-vendor">Vendor</button>
-<button class="btn-outline btn-sm login-attendee">Attendee</button>
+<button class="btn-outline btn-sm login-vip">VIP</button>
+<button class="btn-outline btn-sm login-registered_user">Registered</button>
+<button class="btn-outline btn-sm login-user">Attendee</button>
 </div>
 </div>
 <div class="code-section">
@@ -179,8 +182,9 @@ input,textarea{outline:none}
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
-let map, currentUser=null, currentEvent=null;
+let map, currentUser=null, currentEvent=null, heatLayer=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
 let showingNearby=false, locationWatchId=null;
 
@@ -196,8 +200,11 @@ function showError(msg){
 
 function updateMyMarker(loc){
   if(!map||!loc)return;
-  if(userMarkers._me){userMarkers._me.setLatLng([loc.lat,loc.lng])}
-  else{const icon=L.divIcon({className:'',html:'<div style="width:16px;height:16px;border-radius:50%;background:#22c55e;border:3px solid #4ade80;box-shadow:0 0 12px rgba(34,197,94,0.6)"></div>',iconSize:[16,16],iconAnchor:[8,8]});userMarkers._me=L.marker([loc.lat,loc.lng],{icon,zIndexOffset:200}).addTo(map)}
+  var rc={admin:'#dc2626',organizer:'#f59e0b',sponsor:'#f59e0b',vendor:'#22c55e',vip:'#ec4899',registered_user:'#6366f1',user:'#06b6d4',attendee:'#06b6d4'};
+  var c=rc[currentUser?.role]||'#6366f1';
+  var icon=L.divIcon({className:'',html:'<div style=\"width:20px;height:20px;border-radius:50%;background:'+c+';border:3px solid #fff;box-shadow:0 0 12px '+c+';position:relative\"><div style=\"position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;color:#a5b4fc;white-space:nowrap;font-weight:600\">YOU</div></div>',iconSize:[20,20],iconAnchor:[10,10]});
+  if(userMarkers._me){map.removeLayer(userMarkers._me)}
+  userMarkers._me=L.marker([loc.lat,loc.lng],{icon,zIndexOffset:200}).addTo(map);
 }
 
 function handleLogin(role){
@@ -225,9 +232,9 @@ function handleCodeLogin(){
 }
 
 function initLogin(){
-  $('#loginBtn').addEventListener('click',()=>handleLogin('attendee'));
-  $('#loginInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin('attendee')});
-  ['admin','organizer','vendor','attendee'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
+  $('#loginBtn').addEventListener('click',()=>handleLogin('user'));
+  $('#loginInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin('user')});
+  ['admin','organizer','sponsor','vendor','vip','registered_user','user'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
 }
 
 function initMap(){
@@ -241,7 +248,7 @@ function initMap(){
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
     L.marker([ev.lat,ev.lng],{icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6)"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
     if(ev.radius_meters) L.circle([ev.lat,ev.lng],{radius:ev.radius_meters,color:'#6366f1',fillColor:'#6366f1',fillOpacity:0.05,weight:1}).addTo(map);
-    loadVendors();loadSpots();setupLocation();setupPolling();initControls();
+    loadVendors();loadSpots();setupLocation();setupHeatmap();setupPolling();initControls();
   }catch(e){showError('Map error: '+e.message)}
 }
 
@@ -282,6 +289,7 @@ function setupLocation(){
   tg(2)
 }
 function useDefaultLocation(){var l={lat:currentEvent.lat,lng:currentEvent.lng+0.001};updateMyMarker(l);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...l,event_id:currentEvent.id})})}
+function setupHeatmap(){if(typeof L.heatLayer!=="function")return;heatLayer=L.heatLayer([],{radius:25,blur:15,maxZoom:10,max:4,gradient:{0.2:"#4f46e5",0.4:"#6366f1",0.6:"#22c55e",0.8:"#f59e0b",1:"#ef4444"}}).addTo(map)}
 
 function setupPolling(){
   pollingTimers.push(setInterval(pollUsers,5000));
@@ -292,14 +300,24 @@ function setupPolling(){
 function pollUsers(){
   if(!currentEvent||!showingNearby)return;
   fetch('/api/users/'+currentEvent.id).then(r=>r.json()).then(list=>{
-    list.forEach(u=>{if(u.username===currentUser.username)return;const colors={admin:'#dc2626',organizer:'#f59e0b',vendor:'#22c55e',attendee:'#6366f1'};const c=colors[u.role]||'#6366f1';const icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:'+c+';border:2px solid #fff;box-shadow:0 0 6px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div></div>',iconSize:[14,14],iconAnchor:[7,7]});if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else if(u.lat&&u.lng){userMarkers[u.username]=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map)}})
-  })
-}
-
-function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{const ids=new Set(list.filter(v=>v.is_active).map(v=>v.id));Object.keys(vendorMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(vendorMarkers[id]);delete vendorMarkers[id]}});list.filter(v=>v.is_active).forEach(v=>{if(vendorMarkers[v.id]){const m=vendorMarkers[v.id];if(m.getLatLng().lat!==v.lat||m.getLatLng().lng!==v.lng)m.setLatLng([v.lat,v.lng])}else addVendorMarker(v)})})}
+    var heatPoints=[];
+    var ids=new Set(list.map(u=>u.username));
+    Object.keys(userMarkers).forEach(k=>{if(k!=='_me'&&!ids.has(k)){map.removeLayer(userMarkers[k]);delete userMarkers[k]}});
+    var colors={admin:'#dc2626',organizer:'#f59e0b',sponsor:'#f59e0b',vendor:'#22c55e',vip:'#ec4899',registered_user:'#6366f1',user:'#06b6d4',attendee:'#06b6d4'};
+    var labels={admin:'Admin',organizer:'Organizer',sponsor:'Sponsor',vendor:'Vendor',vip:'VIP',registered_user:'Registered',user:'User',attendee:'User'};
+    list.forEach(u=>{
+      if(u.username===currentUser.username)return;
+      if(u.lat&&u.lng&&u.heat) heatPoints.push([u.lat,u.lng,u.heat]);
+      var c=colors[u.role]||'#6366f1';
+      var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:'+c+';border:2px solid #fff;box-shadow:0 0 6px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div></div>',iconSize:[14,14],iconAnchor:[7,7]});
+      if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else if(u.lat&&u.lng){userMarkers[u.username]=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map)}
+    });
+    if(heatLayer&&heatPoints.length)heatLayer.setLatLngs(heatPoints);
+  });
+}function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{const ids=new Set(list.filter(v=>v.is_active).map(v=>v.id));Object.keys(vendorMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(vendorMarkers[id]);delete vendorMarkers[id]}});list.filter(v=>v.is_active).forEach(v=>{if(vendorMarkers[v.id]){const m=vendorMarkers[v.id];if(m.getLatLng().lat!==v.lat||m.getLatLng().lng!==v.lng)m.setLatLng([v.lat,v.lng])}else addVendorMarker(v)})})}
 function pollSpots(){if(!currentEvent)return;fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{const ids=new Set(list.map(s=>s.id));Object.keys(spotMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(spotMarkers[id]);delete spotMarkers[id]}});list.forEach(s=>{if(spotMarkers[s.id]){const m=spotMarkers[s.id];if(m.getLatLng().lat!==s.lat||m.getLatLng().lng!==s.lng)m.setLatLng([s.lat,s.lng])}else addSpotMarker(s)})})}
 
-function toggleNearby(){showingNearby=!showingNearby;$('#nearbyBtn').classList.toggle('active',showingNearby);if(!showingNearby){Object.entries(userMarkers).forEach(([k,m])=>{if(k!=='_me'){map.removeLayer(m);delete userMarkers[k]}})}else pollUsers()}
+function toggleNearby(){showingNearby=!showingNearby;$('#nearbyBtn').classList.toggle('active',showingNearby);if(!showingNearby){Object.entries(userMarkers).forEach(([k,m])=>{if(k!=='_me'){map.removeLayer(m);delete userMarkers[k]}});if(heatLayer)heatLayer.setLatLngs([])}else pollUsers()}
 
 function openSpotModal(){show($('#spotModal'));$('#spotLabel').value='';$('#spotDesc').value=''}
 function saveSpot(){const label=$('#spotLabel').value.trim();if(!label)return;const c=map.getCenter();fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,label,description:$('#spotDesc').value.trim(),lat:c.lat,lng:c.lng,spot_type:$('#spotType').value,username:currentUser?.username||'anon'})});hide($('#spotModal'))}
