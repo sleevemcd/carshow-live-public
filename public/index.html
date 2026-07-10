@@ -311,7 +311,7 @@ function initControls(){
   $('#notifToastClose').addEventListener('click',()=>hide($('#notifToast')));
   pollingTimers.push(setInterval(pollNotifs,15000));
   pollNotifs();
-  $('#eventScheduleBar').addEventListener('click',function(){var l=$('#eventScheduleList');var t=$('#eventScheduleToggle');if(l.style.display==='none'||!l.style.display){l.style.display='block';t.textContent='▼';loadMapSchedule()}else{l.style.display='none';t.textContent='▲'}});
+  $('#eventScheduleBar').addEventListener('click',function(){var l=$('#eventScheduleList');var t=$('#eventScheduleToggle');if(l.style.display==='none'||!l.style.display){l.style.display='block';t.textContent='▼'}else{l.style.display='none';t.textContent='▲'}});
   loadMapSchedule();
   $('#mapSearch').addEventListener('input',function(){
     var q=this.value.toLowerCase().trim();
@@ -378,14 +378,13 @@ function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+currentEven
 function pollSpots(){if(!currentEvent)return;fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{var ids=new Set(list.map(s=>s.id));Object.keys(spotMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(spotMarkers[id]);delete spotMarkers[id]}});list.forEach(s=>{if(spotMarkers[s.id]){var m=spotMarkers[s.id];if(m.getLatLng().lat!==s.lat||m.getLatLng().lng!==s.lng)m.setLatLng([s.lat,s.lng])}else addSpotMarker(s)})})}
 
 function openSpotModal(){
-  if(!myLocation){showError('Your location is not available yet. Please wait or allow location access.');return}
   show($('#spotModal'));$('#spotLabel').value='';$('#spotDesc').value='';
 }
 function saveSpot(){
   var label=$('#spotLabel').value.trim();
-  if(!label||!myLocation)return;
-  var type=$('#spotType').value;
-  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,label,description:$('#spotDesc').value.trim(),lat:myLocation.lat,lng:myLocation.lng,spot_type:type,username:currentUser?.username||'anon'})});
+  if(!label)return;
+  var loc=myLocation||map.getCenter();
+  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,label,description:$('#spotDesc').value.trim(),lat:loc.lat,lng:loc.lng,spot_type:$('#spotType').value,username:currentUser?.username||'anon'})});
   hide($('#spotModal'));
 }
 // spot type change updates label placeholder

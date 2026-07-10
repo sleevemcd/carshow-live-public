@@ -71,11 +71,13 @@ async function syncCalendar() {
       
       let parentId = undefined;
       let cleanDesc = ce.desc || '';
-      let rollIn = undefined, showStart = undefined;
+      let rollIn = undefined, showStart = undefined, calLat=undefined, calLng=undefined;
       let rim = cleanDesc.match(/roll_in:\s*(.+)/i);
       if (rim) { rollIn = new Date(rim[1].trim()).toISOString(); cleanDesc = cleanDesc.replace(/roll_in:\s*.+/i,'').trim(); }
       let ssm = cleanDesc.match(/show_start:\s*(.+)/i);
       if (ssm) { showStart = new Date(ssm[1].trim()).toISOString(); cleanDesc = cleanDesc.replace(/show_start:\s*.+/i,'').trim(); }
+      let latm=cleanDesc.match(/lat:\s*([\d.]+)/i); if(latm){calLat=parseFloat(latm[1]);cleanDesc=cleanDesc.replace(/lat:\s*[\d.]+/i,'').trim()}
+      let lngm=cleanDesc.match(/lng:\s*([\d.-]+)/i); if(lngm){calLng=parseFloat(lngm[1]);cleanDesc=cleanDesc.replace(/lng:\s*[\d.-]+/i,'').trim()}
       
       if (cleanDesc.includes('type: master')) {
         parentId = undefined;
@@ -98,7 +100,7 @@ async function syncCalendar() {
         name: ce.name,
         description: cleanDesc,
         location_name: ce.loc || '',
-        lat: 40.5144, lng: -111.4764,
+        lat: calLat || 40.5144, lng: calLng || -111.4764,
         radius_meters: 2000,
         start_date: showStart || ce.dtstart || new Date().toISOString(),
         roll_in_time: rollIn || undefined,
