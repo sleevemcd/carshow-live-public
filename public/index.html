@@ -209,7 +209,7 @@ input,textarea{outline:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
-let map, currentUser=null, currentEvent=null, heatLayer=null, currentVendor=null;
+let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
 let showingNearby=false, locationWatchId=null, myLocation=null;
 
@@ -290,12 +290,12 @@ function initControls(){
   });
   $('#closeVendorPopup').addEventListener('click',()=>hide($('#vendorPopup')));
   $('#vpFollowBtn').addEventListener('click',function(){
-    if(!currentVendor||!currentUser)return;
+    if(!currentFollowTarget||!currentUser)return;
     var btn=this;
-    if(btn.textContent.includes('Unfollow')){
-      fetch('/api/unfollow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentVendor.user_id})}).then(()=>{updateFollowBtn()});
+    if(btn.textContent.includes('Following')){
+      fetch('/api/unfollow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentFollowTarget.id})}).then(()=>updateFollowBtn());
     }else{
-      fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentVendor.user_id})}).then(()=>{updateFollowBtn()});
+      fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentFollowTarget.id})}).then(()=>updateFollowBtn());
     }
   });
   $('#saveSpotBtn').addEventListener('click',saveSpot);
@@ -330,7 +330,7 @@ function initControls(){
 }
 
 function loadVendors(){fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));vendorMarkers={};list.forEach(addVendorMarker)})}
-function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4);overflow:hidden"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map).bindPopup('<b>'+esc(v.business_name)+'</b><br>'+esc(v.description)+(v.tags?.length?'<br><small>'+v.tags.map(t=>'#'+t).join(' ')+'</small>':''));m.on('click',()=>{$('#vpName').textContent=v.business_name;$('#vpDesc').textContent=v.description;$('#vpTags').innerHTML=(v.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('');currentVendor=v;updateFollowBtn();show($('#vendorPopup'))});vendorMarkers[v.id]=m}
+function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4);overflow:hidden"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map);m.on('click',()=>{currentFollowTarget={name:v.business_name||v.user_id,desc:v.description||'',type:'vendor',id:v.user_id};showInfoPopup()});vendorMarkers[v.id]=m}
 function loadSpots(){fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
 function addSpotMarker(s){var isCar=s.spot_type==='car_spot';var isFood=s.spot_type==='food';var icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':isFood?'#ef4444':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':isFood?'#fca5a5':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':isFood?'🍔':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});var m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>');m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST'}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+d.likes+'</small>')})});spotMarkers[s.id]=m}
 
@@ -367,7 +367,7 @@ function pollUsers(){
         var c=rc[u.role]||'#6366f1';
         var isVip=u.role==='vip';
         var icon=L.divIcon({className:'',html:'<div style="width:'+(isVip?36:40)+'px;height:'+(isVip?36:40)+'px;border-radius:'+(isVip?'50%':'10px')+';background:#18181b;border:2px solid '+c+';display:flex;align-items:center;justify-content:center;font-size:'+(isVip?18:20)+'px;box-shadow:0 0 8px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div>'+(isVip?'👤':(u.role==='vendor'?'🏪':'⭐'))+'</div>',iconSize:[isVip?36:40,isVip?36:40],iconAnchor:[isVip?18:20,isVip?18:20]});
-        if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else{userMarkers[u.username]=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map).bindPopup('<b>'+esc(u.username)+'</b><br><small>'+u.role.replace(/_/g,' ')+'</small>')}
+        if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else{var um=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map);um.on('click',function(){currentFollowTarget={name:u.username,desc:u.role.replace(/_/g,' '),type:u.role,id:u.username};showInfoPopup()});userMarkers[u.username]=um}
       }
     });
     if(heatLayer&&heatPoints.length)heatLayer.setLatLngs(heatPoints);
@@ -452,7 +452,6 @@ function loadMapSchedule(){
     var sub=list.filter(e=>e.parent_event_id&&e.is_active&&new Date(e.start_date).getTime()>now).sort((a,b)=>new Date(a.start_date).getTime()-new Date(b.start_date).getTime()).slice(0,5);
     $('#eventScheduleNext').textContent=sub.length?sub[0].name+' — '+new Date(sub[0].start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'No upcoming events';
     $('#eventScheduleList').innerHTML=sub.map(e=>'<div style="padding:6px 0;font-size:12px;border-bottom:1px solid #27272a;display:flex;justify-content:space-between;cursor:pointer" onclick="jumpToEvent(\''+e.id+'\')"><span style="color:#d4d4d8">'+esc(e.name)+'</span><span style="color:#71717a">'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></div>').join('');
-    $('#eventScheduleList').style.display='none';$('#eventScheduleToggle').textContent='▲';
   });
 }
 function pollNotifs(){
@@ -474,12 +473,20 @@ function loadNotifs(){
 }
 function dismissNotif(key){fetch('/api/notifications/'+key,{method:'DELETE'}).then(()=>{loadNotifs();pollNotifs()})}
 function updateFollowBtn(){
-  if(!currentVendor||!currentUser)return;
+  if(!currentFollowTarget||!currentUser)return;
   fetch('/api/follows/'+currentUser.username).then(r=>r.json()).then(list=>{
-    var f=list.includes(currentVendor.user_id);
+    var f=list.includes(currentFollowTarget.id);
     $('#vpFollowBtn').textContent=f?'✓ Following':'+ Follow';
     $('#vpFollowBtn').style.color=f?'#22c55e':'';
   });
+}
+function showInfoPopup(){
+  if(!currentFollowTarget)return;
+  $('#vpName').textContent=currentFollowTarget.name;
+  $('#vpDesc').textContent=currentFollowTarget.desc;
+  $('#vpTags').innerHTML='';
+  show($('#vendorPopup'));
+  updateFollowBtn();
 }
 window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#eventHQ'));hide($('#dashboardView'));show($('#app'));initMap()})}
 function loadEventMarkers(){
