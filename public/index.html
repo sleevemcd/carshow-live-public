@@ -128,7 +128,7 @@ input,textarea{outline:none}
 <div id="controls">
 <button id="locateBtn" title="Jump to my location">◎ My Location</button>
 <div style="position:relative;margin-top:4px">
-<input type="text" id="mapSearch" placeholder="🔍 Search spots, vendors, VIPs..." style="width:180px;padding:7px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px" />
+<input type="text" id="mapSearch" placeholder="🔍 Search spots, vendors, cars..." style="width:180px;padding:7px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px" />
 <div id="mapSearchResults" style="display:none;position:absolute;top:100%;right:0;width:200px;max-height:150px;overflow-y:auto;background:#18181b;border:1px solid #27272a;border-radius:8px;margin-top:2px;z-index:20"></div>
 </div>
 </div>
@@ -333,11 +333,18 @@ function initControls(){
     var results=[];
     Object.values(vendorMarkers).forEach(m=>{var n=m.getPopup().getContent().toLowerCase();if(n.includes(q))results.push({el:m,type:'vendor'})});
     Object.values(spotMarkers).forEach(m=>{var n=m.getPopup().getContent().toLowerCase();if(n.includes(q))results.push({el:m,type:'spot'})});
-    if(results.length){
-      r.innerHTML=results.map((x,i)=>'<div style="padding:6px 10px;font-size:12px;color:#d4d4d8;cursor:pointer;border-bottom:1px solid #27272a" data-idx="'+i+'">'+(x.type==='vendor'?'🏪 ':'📍 ')+x.el.getPopup().getContent().replace(/<[^>]*>/g,'').substring(0,40)+'</div>').join('');
-      r.style.display='block';
-      r.querySelectorAll('div').forEach(d=>d.addEventListener('click',function(){var idx=parseInt(this.dataset.idx);if(results[idx]){results[idx].el.openPopup();map.setView(results[idx].el.getLatLng(),17);r.style.display='none'}}));
-    }else{r.style.display='none'}
+    // Car search - find users with matching car
+    fetch('/api/users/'+currentEvent.id).then(resp=>resp.json()).then(ulist=>{
+      var carUsers=ulist.filter(u=>u.car&&u.car.toLowerCase().includes(q));
+      if(carUsers.length){
+        results.push({type:'car_hotspot',count:carUsers.length,users:carUsers});
+      }
+      if(results.length){
+        r.innerHTML=results.map((x,i)=>'<div style="padding:6px 10px;font-size:12px;color:#d4d4d8;cursor:pointer;border-bottom:1px solid #27272a" data-idx="'+i+'">'+(x.type==='vendor'?'🏪 ':x.type==='spot'?'📍 ':x.type==='car_hotspot'?'🔥 ':'')+(x.type==='car_hotspot'?x.count+' cars matching "'+q+'" — find hot spot':x.el.getPopup().getContent().replace(/<[^>]*>/g,'').substring(0,40))+'</div>').join('');
+        r.style.display='block';
+        r.querySelectorAll('div').forEach(d=>d.addEventListener('click',function(){var idx=parseInt(this.dataset.idx);if(results[idx].type==='car_hotspot'){findCarHotspot(results[idx].users,q)}else{results[idx].el.openPopup();map.setView(results[idx].el.getLatLng(),17);r.style.display='none'}}));
+      }else{r.style.display='none'}
+    });
   });
   $('#mapSearch').addEventListener('blur',function(){setTimeout(function(){$('#mapSearchResults').style.display='none'},200)});
 }
@@ -555,6 +562,27 @@ window.toggleFollow=function(id,name,type){
       fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:id})}).then(()=>updateFollowBtnUI(id));
     }
   });
+}
+function findCarHotspot(users,q){
+  if(!users.length)return;
+  // Find density center: average of all matching user locations
+  var sumLat=0,sumLng=0;
+  users.forEach(u=>{sumLat+=u.lat;sumLng+=u.lng});
+  var center={lat:sumLat/users.length,lng:sumLng/users.length};
+  // Find closest density: grid-based approach
+  var best={lat:center.lat,lng:center.lng,count:0};
+  for(var i=0;i<20;i++){
+    var testLat=center.lat+(Math.random()-0.5)*0.01;
+    var testLng=center.lng+(Math.random()-0.5)*0.01;
+    var cnt=0;
+    users.forEach(u=>{var d=Math.sqrt(Math.pow(u.lat-testLat,2)+Math.pow(u.lng-testLng,2));if(d<0.005)cnt++});
+    if(cnt>best.count){best={lat:testLat,lng:testLng,count:cnt}}
+  }
+  map.setView([best.lat,best.lng],16);
+  // Flash a circle
+  var circle=L.circle([best.lat,best.lng],{radius:100,color:'#ef4444',fillColor:'#ef4444',fillOpacity:0.2,weight:2}).addTo(map);
+  setTimeout(()=>map.removeLayer(circle),3000);
+  $('#mapSearchResults').style.display='none';
 }
 function updateFollowBtnUI(id){
   if(!currentUser)return;
