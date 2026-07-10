@@ -44,7 +44,7 @@ const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/a06502732cdb2e41
 async function syncCalendar() {
   try {
     const https = require('https');
-    const url = new URL(CALENDAR_URL);
+    const parsed = new URL(CALENDAR_URL);
     const ics = await new Promise((resolve, reject) => {
       https.get(url, (res) => { let d='';res.on('data',c=>d+=c);res.on('end',()=>resolve(d)); }).on('error',reject);
     });
@@ -114,7 +114,7 @@ async function syncCalendar() {
 }
 
 setInterval(syncCalendar, 5 * 60 * 1000); // Every 5 minutes
-syncCalendar();
+setTimeout(syncCalendar, 10000); // Delay initial sync to not block cold start
 
 // Auto-generate event notifications
 setInterval(() => {
