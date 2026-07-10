@@ -32,7 +32,7 @@ input,textarea{outline:none}
 .code-row{display:flex;gap:8px}
 .code-row input{flex:1;margin-bottom:0;text-transform:uppercase}
 .code-hint{font-size:11px;color:#52525b;margin-top:6px}
-#app{display:none;position:fixed;inset:0}
+#app{position:fixed;inset:0}
 #map{position:absolute;inset:0;z-index:1}
 .leaflet-container{background:#18181b}
 #header{position:absolute;top:0;left:0;right:0;z-index:10;padding:12px 16px;background:linear-gradient(180deg,rgba(9,9,11,0.95),transparent);display:flex;align-items:center;justify-content:space-between}
@@ -101,7 +101,7 @@ input,textarea{outline:none}
 </div>
 </div>
 
-<div id="app">
+<div id="app" style="display:none">
 <div id="map"></div>
 <div id="header">
 <div><h1 id="eventId">Loading...</h1><div class="event-loc" id="eventLoc"></div></div>
@@ -171,7 +171,7 @@ let map, currentUser=null, currentEvent=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
 let showingNearby=false, locationWatchId=null;
 
-const $=s=>document.querySelector(s), show=el=>el.style.display='', hide=el=>el.style.display='none';
+const $=s=>document.querySelector(s), show=el=>el.style.display='block', hide=el=>el.style.display='none';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
 function handleLogin(role){
