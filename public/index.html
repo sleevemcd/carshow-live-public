@@ -276,7 +276,7 @@ function initControls(){
     $('#newEventBtn').addEventListener('click',openEventModal);
     $('#addVendorAdminBtn').addEventListener('click',openVendorModal);
     loadAdminPanel();
-
+  }
   $('#shareBtn').addEventListener('click',openSpotModal);
   $('#locateBtn').addEventListener('click',()=>{
     if(!navigator.geolocation){useDefaultLocation();return}
@@ -296,7 +296,7 @@ function initControls(){
       fetch('/api/unfollow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentVendor.user_id})}).then(()=>{updateFollowBtn()});
     }else{
       fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,follow:currentVendor.user_id})}).then(()=>{updateFollowBtn()});
-  
+    }
   });
   $('#saveSpotBtn').addEventListener('click',saveSpot);
   $('#cancelSpotBtn').addEventListener('click',()=>hide($('#spotModal')));
@@ -311,10 +311,8 @@ function initControls(){
   $('#notifToastClose').addEventListener('click',()=>hide($('#notifToast')));
   pollingTimers.push(setInterval(pollNotifs,15000));
   pollNotifs();
-  // Bind only once
-  
-  $('#eventScheduleBar').addEventListener('click',function(){var l=$('#eventScheduleList');var t=$('#eventScheduleToggle');if(l.style.display==='none'||!l.style.display){l.style.display='block';t.textContent='▼'}else{l.style.display='none';t.textContent='▲'}});
-
+  $('#eventScheduleBar').addEventListener('click',function(){var l=$('#eventScheduleList');var t=$('#eventScheduleToggle');if(l.style.display==='none'||!l.style.display){l.style.display='block';t.textContent='▼';loadMapSchedule()}else{l.style.display='none';t.textContent='▲'}});
+  loadMapSchedule();
   $('#mapSearch').addEventListener('input',function(){
     var q=this.value.toLowerCase().trim();
     var r=$('#mapSearchResults');
@@ -370,7 +368,7 @@ function pollUsers(){
         var isVip=u.role==='vip';
         var icon=L.divIcon({className:'',html:'<div style="width:'+(isVip?36:40)+'px;height:'+(isVip?36:40)+'px;border-radius:'+(isVip?'50%':'10px')+';background:#18181b;border:2px solid '+c+';display:flex;align-items:center;justify-content:center;font-size:'+(isVip?18:20)+'px;box-shadow:0 0 8px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div>'+(isVip?'👤':(u.role==='vendor'?'🏪':'⭐'))+'</div>',iconSize:[isVip?36:40,isVip?36:40],iconAnchor:[isVip?18:20,isVip?18:20]});
         if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else{userMarkers[u.username]=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map).bindPopup('<b>'+esc(u.username)+'</b><br><small>'+u.role.replace(/_/g,' ')+'</small>')}
-    
+      }
     });
     if(heatLayer&&heatPoints.length)heatLayer.setLatLngs(heatPoints);
   });
@@ -450,12 +448,10 @@ function initHQControls(){
 }
 function loadMapSchedule(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
-    var master=list.filter(e=>!e.parent_event_id&&e.is_active);
-    var sub=list.filter(e=>e.parent_event_id&&e.is_active);
     var now=Date.now();
-    var upcoming=sub.filter(e=>new Date(e.start_date).getTime()>now).sort((a,b)=>new Date(a.start_date).getTime()-new Date(b.start_date).getTime()).slice(0,5);
-    $('#eventScheduleNext').textContent=upcoming.length?upcoming[0].name+' — '+new Date(upcoming[0].start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'No upcoming events';
-    $('#eventScheduleList').innerHTML=upcoming.map(e=>'<div style="padding:6px 0;font-size:12px;border-bottom:1px solid #27272a;display:flex;justify-content:space-between;cursor:pointer" onclick="jumpToEvent(\''+e.id+'\')"><span style="color:#d4d4d8">'+esc(e.name)+'</span><span style="color:#71717a">'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></div>').join('');
+    var sub=list.filter(e=>e.parent_event_id&&e.is_active&&new Date(e.start_date).getTime()>now).sort((a,b)=>new Date(a.start_date).getTime()-new Date(b.start_date).getTime()).slice(0,5);
+    $('#eventScheduleNext').textContent=sub.length?sub[0].name+' — '+new Date(sub[0].start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'No upcoming events';
+    $('#eventScheduleList').innerHTML=sub.map(e=>'<div style="padding:6px 0;font-size:12px;border-bottom:1px solid #27272a;display:flex;justify-content:space-between;cursor:pointer" onclick="jumpToEvent(\''+e.id+'\')"><span style="color:#d4d4d8">'+esc(e.name)+'</span><span style="color:#71717a">'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></div>').join('');
     $('#eventScheduleList').style.display='none';$('#eventScheduleToggle').textContent='▲';
   });
 }
@@ -468,7 +464,7 @@ function pollNotifs(){
       window._lastNotifKey=list[0].key;
       $('#notifToastMsg').textContent=list[0].message;
       show($('#notifToast'));
-  
+    }
   });
 }
 function loadNotifs(){
@@ -489,15 +485,16 @@ window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(
 function loadEventMarkers(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
     var now=Date.now();
-    if(window._eventMarkers){Object.values(window._eventMarkers).forEach(m=>map.removeLayer(m))}
-    window._eventMarkers={};
     list.filter(e=>e.is_active&&e.lat&&e.lng).forEach(e=>{
       var diff=new Date(e.start_date).getTime()-now;
-      if(diff>0&&diff<7200000){
-        var icon=L.divIcon({className:'',html:'<div style="width:30px;height:30px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6);display:flex;align-items:center;justify-content:center;font-size:14px">📅</div>',iconSize:[30,30],iconAnchor:[15,15]});
-        var m=L.marker([e.lat,e.lng],{icon}).addTo(map).bindPopup('<b>'+esc(e.name)+'</b><br><small>'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</small>'+(e.description?'<br><small>'+esc(e.description.substring(0,80))+'</small>':''));
-        window._eventMarkers[e.id]=m;
-    
+      if(diff>0&&diff<7200000){ // within 2 hours
+        if(!window._eventMarkers)window._eventMarkers={};
+        if(!window._eventMarkers[e.id]){
+          var icon=L.divIcon({className:'',html:'<div style="width:30px;height:30px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6);display:flex;align-items:center;justify-content:center;font-size:14px">📅</div>',iconSize:[30,30],iconAnchor:[15,15]});
+          var m=L.marker([e.lat,e.lng],{icon}).addTo(map).bindPopup('<b>'+esc(e.name)+'</b><br><small>'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</small>'+(e.description?'<br><small>'+esc(e.description.substring(0,80))+'</small>':''));
+          window._eventMarkers[e.id]=m;
+        }
+      }
     });
   });
 }
