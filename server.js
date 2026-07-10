@@ -331,7 +331,7 @@ app.get('/api/users/:eventId', (req, res) => {
   ).map(u => ({
     username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1
   }));
-    const demo = demoUsers.filter(u => u.event_id === req.params.eventId)
+    const demo = demoUsers.filter(u => u.event_id === req.params.eventId && u.locationEnabled !== false)
     .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', car: u.car || '', locationEnabled: u.locationEnabled !== false }));
   res.json([...real, ...demo]);
 });
