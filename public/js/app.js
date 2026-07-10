@@ -67,7 +67,8 @@ function initLogin() {
 function initMap() {
   try {
     const ev = currentEvent;
-    if (!ev) { console.error('No event data'); return; }
+    if (!ev) { showError('No event data'); return; }
+    if (typeof L === 'undefined') { showError('Map library not loaded. Please refresh.'); return; }
     $('#eventId').textContent = ev.name;
     $('#eventLoc').textContent = ev.location_name;
     document.title = ev.name + ' — CarShow';
@@ -91,8 +92,15 @@ function initMap() {
     setupPolling();
     initControls();
   } catch(e) {
-    console.error('Map init error:', e);
+    showError('Map error: ' + e.message);
   }
+}
+
+function showError(msg) {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;z-index:999;color:#f4f4f5;text-align:center;';
+  el.innerHTML = '<p>' + msg + '</p><button onclick="this.parentElement.remove()" style="margin-top:8px;padding:6px 14px;border-radius:8px;background:#4f46e5;color:#fff;border:none;cursor:pointer;">OK</button>';
+  document.body.appendChild(el);
 }
 
 function initControls() {
