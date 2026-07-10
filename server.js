@@ -1,16 +1,10 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
-
-// ── In-memory store ────────────────────────────────────────────────
 
 const events = [
   { id: "demo-event-1", name: "Wasatch Euro Fest 2026", description: "Utah's premier European car festival set against the stunning Wasatch Mountains. Exotics, classics, live music, food trucks, and a vendor village.", location_name: "Midway, Utah", lat: 40.5144, lng: -111.4764, radius_meters: 2000, start_date: "2026-07-10T00:00:00Z", end_date: "2026-07-12T00:00:00Z", access_code: "WEF2026", is_active: true, created_at: new Date().toISOString() },
@@ -28,9 +22,7 @@ const vendors = [
 
 const spots = [];
 const users = {};
-const sockets = {};
-
-// ── Event API ──────────────────────────────────────────────────────
+const USERS_EXPIRY_MS = 60 * 1000;
 
 app.get('/api/events', (req, res) => {
   const all = events.map(e => ({ ...e, child_count: events.filter(c => c.parent_event_id === e.id).length }));
@@ -78,8 +70,6 @@ app.delete('/api/events/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// ── Vendor API ─────────────────────────────────────────────────────
-
 app.get('/api/vendors/:eventId', (req, res) => {
   res.json(vendors.filter(v => v.event_id === req.params.eventId));
 });
@@ -89,7 +79,6 @@ app.post('/api/vendors', (req, res) => {
   if (!event_id || !business_name) return res.status(400).json({ error: 'event_id and business_name required' });
   const v = { id: 'v-' + Date.now(), user_id: req.body.user_id || 'anon', event_id, business_name, description: description || '', tags: tags || [], is_active: true, lat: lat || 40.5144, lng: lng || -111.4764 };
   vendors.push(v);
-  io.to(event_id).emit('vendorAdded', v);
   res.json(v);
 });
 
@@ -97,20 +86,15 @@ app.put('/api/vendors/:id', (req, res) => {
   const idx = vendors.findIndex(v => v.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
   Object.assign(vendors[idx], req.body);
-  io.to(vendors[idx].event_id).emit('vendorUpdated', vendors[idx]);
   res.json(vendors[idx]);
 });
 
 app.delete('/api/vendors/:id', (req, res) => {
   const idx = vendors.findIndex(v => v.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  const eid = vendors[idx].event_id;
   vendors.splice(idx, 1);
-  io.to(eid).emit('vendorRemoved', req.params.id);
   res.json({ success: true });
 });
-
-// ── Spots API ──────────────────────────────────────────────────────
 
 app.get('/api/spots/:eventId', (req, res) => {
   const now = Date.now();
@@ -123,7 +107,6 @@ app.post('/api/spots', (req, res) => {
   const expiry = (spot_type === 'car_spot') ? 30 * 60 * 1000 : 24 * 60 * 60 * 1000;
   const s = { id: 's-' + Date.now(), event_id, label, description: description || '', lat, lng, spot_type: spot_type || 'spot', username: username || 'anonymous', likes: 0, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + expiry).toISOString() };
   spots.push(s);
-  io.to(event_id).emit('spotAdded', s);
   res.json(s);
 });
 
@@ -131,80 +114,75 @@ app.post('/api/spots/:id/like', (req, res) => {
   const s = spots.find(sp => sp.id === req.params.id);
   if (!s) return res.status(404).json({ error: 'Not found' });
   s.likes = (s.likes || 0) + 1;
-  io.to(s.event_id).emit('spotLiked', { id: s.id, likes: s.likes });
   res.json({ likes: s.likes });
 });
 
 app.delete('/api/spots/:id', (req, res) => {
   const idx = spots.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  const eid = spots[idx].event_id;
   spots.splice(idx, 1);
-  io.to(eid).emit('spotRemoved', req.params.id);
   res.json({ success: true });
 });
 
-// ── Location API ───────────────────────────────────────────────────
+app.post('/api/login', (req, res) => {
+  const { username, role, event_id } = req.body;
+  if (!username) return res.status(400).json({ error: 'Username required' });
+  const name = username.trim();
+  const eid = event_id || 'demo-event-1';
+  const ev = events.find(e => e.id === eid) || events[0];
+
+  if (!users[name]) {
+    users[name] = { username: name, role: role || 'attendee', event_id: eid, online: true, locationEnabled: true, lat: null, lng: null, last_seen: Date.now() };
+  } else {
+    users[name].event_id = eid;
+    users[name].online = true;
+    users[name].last_seen = Date.now();
+  }
+
+  res.json({ username: name, role: role || 'attendee', event: ev });
+});
+
+app.post('/api/logout', (req, res) => {
+  const { username } = req.body;
+  if (username && users[username]) {
+    users[username].online = false;
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/location', (req, res) => {
+  const { username, lat, lng, event_id } = req.body;
+  if (!username || lat == null || lng == null) return res.status(400).json({ error: 'username, lat, lng required' });
+  if (users[username]) {
+    users[username].lat = lat;
+    users[username].lng = lng;
+    users[username].last_seen = Date.now();
+    users[username].online = true;
+    if (event_id) users[username].event_id = event_id;
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/location/toggle', (req, res) => {
+  const { username } = req.body;
+  if (!username || !users[username]) return res.status(400).json({ error: 'User not found' });
+  users[username].locationEnabled = !users[username].locationEnabled;
+  res.json({ locationEnabled: users[username].locationEnabled });
+});
 
 app.get('/api/users/:eventId', (req, res) => {
-  const list = Object.values(users).filter(u => u.event_id === req.params.event_id && u.online && u.locationEnabled).map(u => ({
+  const now = Date.now();
+  const list = Object.values(users).filter(u =>
+    u.event_id === req.params.eventId && u.online && u.locationEnabled && (now - u.last_seen < USERS_EXPIRY_MS)
+  ).map(u => ({
     username: u.username, lat: u.lat, lng: u.lng, role: u.role
   }));
   res.json(list);
 });
 
-// ── Socket.io ──────────────────────────────────────────────────────
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`CarShow Live running on http://localhost:${PORT}`));
+}
 
-io.on('connection', (socket) => {
-
-  socket.on('login', ({ username, role, event_id }) => {
-    if (!username) return;
-    const name = username.trim();
-    if (sockets[name]) io.to(sockets[name]).emit('forceLogout', 'Logged in elsewhere');
-    if (!users[name]) {
-      users[name] = { username: name, role: role || 'attendee', event_id, socketId: socket.id, online: true, locationEnabled: true, lat: null, lng: null };
-    } else {
-      users[name].socketId = socket.id;
-      users[name].online = true;
-      users[name].event_id = event_id;
-    }
-    sockets[socket.id] = name;
-    sockets[name] = socket.id;
-    socket.join(event_id);
-    socket.emit('loginSuccess', { username: name, role: role || 'attendee', event_id });
-    io.to(event_id).emit('userJoined', { username: name, role: role || 'attendee' });
-  });
-
-  socket.on('locationUpdate', ({ lat, lng, event_id }) => {
-    const username = sockets[socket.id];
-    if (!username || !users[username]) return;
-    users[username].lat = lat;
-    users[username].lng = lng;
-    if (users[username].locationEnabled) {
-      io.to(event_id).emit('userLocationUpdate', { username, lat, lng, role: users[username].role });
-    }
-  });
-
-  socket.on('toggleLocation', (enabled) => {
-    const username = sockets[socket.id];
-    if (!username || !users[username]) return;
-    users[username].locationEnabled = enabled;
-    io.to(users[username].event_id).emit('userLocationUpdate', {
-      username, lat: enabled ? users[username].lat : null, lng: enabled ? users[username].lng : null, role: users[username].role
-    });
-  });
-
-  socket.on('disconnect', () => {
-    const username = sockets[socket.id];
-    if (username && users[username]) {
-      const eid = users[username].event_id;
-      users[username].online = false;
-      io.to(eid).emit('userLeft', { username });
-    }
-    delete sockets[socket.id];
-    if (sockets[username]) delete sockets[username];
-  });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CarShow Live running on http://localhost:${PORT}`));
+module.exports = app;

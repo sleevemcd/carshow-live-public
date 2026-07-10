@@ -1,5 +1,3 @@
-// ── State ──────────────────────────────────────────────────────────
-let socket;
 let map;
 let currentUser = null;
 let currentEvent = null;
@@ -7,24 +5,36 @@ let userMarkers = {};
 let vendorMarkers = {};
 let spotMarkers = {};
 let locationWatchId = null;
+let pollingTimers = [];
 
-// ── Helpers ────────────────────────────────────────────────────────
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 const show = (el) => el.style.display = '';
 const hide = (el) => el.style.display = 'none';
 const escape = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
-// ── Login ──────────────────────────────────────────────────────────
 function handleLogin(role) {
   const username = $('#loginInput').value.trim();
-  const code = $('#codeInput')?.value.trim().toUpperCase();
   const err = $('#loginError');
   err.textContent = '';
 
   if (!username || username.length < 2) { err.textContent = 'Enter a username (min 2 chars)'; return; }
 
-  socket.emit('login', { username, role, event_id: currentEvent?.id || 'demo-event-1' });
+  fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, role, event_id: currentEvent?.id || 'demo-event-1' })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { err.textContent = data.error; return; }
+      currentUser = { username: data.username, role: data.role, event_id: data.event.id };
+      currentEvent = data.event;
+      hide($('#loginScreen'));
+      show($('#app'));
+      initMap();
+    })
+    .catch(() => { err.textContent = 'Login failed'; });
 }
 
 function handleCodeLogin() {
@@ -44,18 +54,6 @@ function handleCodeLogin() {
 }
 
 function initLogin() {
-  socket = io();
-  socket.on('loginSuccess', (data) => {
-    currentUser = data;
-    hide($('#loginScreen'));
-    show($('#app'));
-    initMap();
-  });
-  socket.on('forceLogout', (msg) => {
-    alert(msg);
-    location.reload();
-  });
-
   $('#loginBtn').addEventListener('click', () => handleLogin('attendee'));
   $('#loginInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin('attendee'); });
 
@@ -65,12 +63,9 @@ function initLogin() {
   });
 }
 
-// ── Map ─────────────────────────────────────────────────────────────
 function initMap() {
-  const el = $('#eventId');
-  const ev = events.find(e => e.id === (currentUser.event_id || 'demo-event-1')) || events[0];
-  currentEvent = ev;
-  el.textContent = ev.name;
+  const ev = currentEvent;
+  $('#eventId').textContent = ev.name;
   $('#eventLoc').textContent = ev.location_name;
   document.title = ev.name + ' — CarShow';
 
@@ -90,7 +85,7 @@ function initMap() {
   loadVendors();
   loadSpots();
   setupLocation();
-  setupSocketListeners();
+  setupPolling();
   initControls();
 }
 
@@ -115,7 +110,11 @@ function initControls() {
   $('#nearbyBtn').addEventListener('click', toggleNearby);
   $('#locateBtn').addEventListener('click', () => { map.locate({ setView: true, maxZoom: 16 }); });
   $('#locationToggle').addEventListener('change', (e) => {
-    socket.emit('toggleLocation', e.target.checked);
+    fetch('/api/location/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username })
+    });
   });
   $('#closeVendorPopup').addEventListener('click', () => hide($('#vendorPopup')));
   $('#saveSpotBtn').addEventListener('click', saveSpot);
@@ -129,7 +128,6 @@ function initControls() {
   });
 }
 
-// ── Vendors ─────────────────────────────────────────────────────────
 function loadVendors() {
   fetch('/api/vendors/' + currentEvent.id)
     .then(r => r.json())
@@ -159,7 +157,6 @@ function addVendorMarker(v) {
   vendorMarkers[v.id] = marker;
 }
 
-// ── Spots ───────────────────────────────────────────────────────────
 function loadSpots() {
   fetch('/api/spots/' + currentEvent.id)
     .then(r => r.json())
@@ -184,19 +181,23 @@ function addSpotMarker(s) {
     fetch('/api/spots/' + s.id + '/like', { method: 'POST' })
       .then(r => r.json())
       .then(data => {
+        if (spotMarkers[s.id]) s.likes = data.likes;
         marker.setPopupContent('<b>' + escape(s.label) + '</b>' + (s.description ? '<br>' + escape(s.description) : '') + '<br><small>by ' + escape(s.username) + ' · ❤️ ' + data.likes + '</small>');
       });
   });
   spotMarkers[s.id] = marker;
 }
 
-// ── Location ────────────────────────────────────────────────────────
 function setupLocation() {
   if (!navigator.geolocation) return;
   locationWatchId = navigator.geolocation.watchPosition(
     (pos) => {
       const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      socket.emit('locationUpdate', { ...loc, event_id: currentEvent.id });
+      fetch('/api/location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser.username, ...loc, event_id: currentEvent.id })
+      });
       updateMyMarker(loc);
     },
     () => {},
@@ -214,35 +215,90 @@ function updateMyMarker(loc) {
   userMarkers._me = L.marker([loc.lat, loc.lng], { icon }).addTo(map);
 }
 
-// ── Socket Handlers ─────────────────────────────────────────────────
-function setupSocketListeners() {
-  socket.on('userJoined', (u) => { /* welcome toast could go here */ });
-  socket.on('userLeft', ({ username }) => {
-    if (userMarkers[username]) { map.removeLayer(userMarkers[username]); delete userMarkers[username]; }
-  });
-  socket.on('userLocationUpdate', ({ username, lat, lng, role }) => {
-    if (userMarkers[username]) map.removeLayer(userMarkers[username]);
-    if (!lat || !lng) { delete userMarkers[username]; return; }
-    const colors = { admin: '#dc2626', organizer: '#f59e0b', vendor: '#22c55e', attendee: '#6366f1' };
-    const color = colors[role] || '#6366f1';
-    const icon = L.divIcon({
-      className: '',
-      html: '<div style="width:14px;height:14px;border-radius:50%;background:' + color + ';border:2px solid #fff;box-shadow:0 0 6px ' + color + ';position:relative;"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap;">' + escape(username) + '</div></div>',
-      iconSize: [14, 14], iconAnchor: [7, 7]
+function setupPolling() {
+  pollingTimers.push(setInterval(pollUsers, 3000));
+  pollingTimers.push(setInterval(pollVendors, 5000));
+  pollingTimers.push(setInterval(pollSpots, 5000));
+}
+
+function pollUsers() {
+  if (!currentEvent || !showingNearby) return;
+  fetch('/api/users/' + currentEvent.id)
+    .then(r => r.json())
+    .then(list => {
+      const activeIds = new Set(list.map(u => u.username));
+      Object.keys(userMarkers).forEach(key => {
+        if (key !== '_me' && !activeIds.has(key)) {
+          map.removeLayer(userMarkers[key]);
+          delete userMarkers[key];
+        }
+      });
+      list.forEach(u => {
+        if (u.username === currentUser.username) return;
+        const colors = { admin: '#dc2626', organizer: '#f59e0b', vendor: '#22c55e', attendee: '#6366f1' };
+        const color = colors[u.role] || '#6366f1';
+        const icon = L.divIcon({
+          className: '',
+          html: '<div style="width:14px;height:14px;border-radius:50%;background:' + color + ';border:2px solid #fff;box-shadow:0 0 6px ' + color + ';position:relative;"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap;">' + escape(u.username) + '</div></div>',
+          iconSize: [14, 14], iconAnchor: [7, 7]
+        });
+        if (userMarkers[u.username]) {
+          userMarkers[u.username].setLatLng([u.lat, u.lng]);
+        } else if (u.lat && u.lng) {
+          userMarkers[u.username] = L.marker([u.lat, u.lng], { icon, zIndexOffset: 100 }).addTo(map);
+        }
+      });
     });
-    userMarkers[username] = L.marker([lat, lng], { icon, zIndexOffset: 100 }).addTo(map);
-  });
+}
 
-  socket.on('vendorAdded', (v) => { addVendorMarker(v); });
-  socket.on('vendorUpdated', (v) => { if (vendorMarkers[v.id]) { map.removeLayer(vendorMarkers[v.id]); delete vendorMarkers[v.id]; } addVendorMarker(v); });
-  socket.on('vendorRemoved', (id) => { if (vendorMarkers[id]) { map.removeLayer(vendorMarkers[id]); delete vendorMarkers[id]; } });
+function pollVendors() {
+  if (!currentEvent) return;
+  fetch('/api/vendors/' + currentEvent.id)
+    .then(r => r.json())
+    .then(list => {
+      const activeIds = new Set(list.filter(v => v.is_active).map(v => v.id));
+      Object.keys(vendorMarkers).forEach(id => {
+        if (!activeIds.has(id)) {
+          map.removeLayer(vendorMarkers[id]);
+          delete vendorMarkers[id];
+        }
+      });
+      list.filter(v => v.is_active).forEach(v => {
+        if (vendorMarkers[v.id]) {
+          const m = vendorMarkers[v.id];
+          if (m.getLatLng().lat !== v.lat || m.getLatLng().lng !== v.lng) {
+            m.setLatLng([v.lat, v.lng]);
+          }
+        } else {
+          addVendorMarker(v);
+        }
+      });
+    });
+}
 
-  socket.on('spotAdded', (s) => { addSpotMarker(s); });
-  socket.on('spotLiked', ({ id, likes }) => {
-    const m = spotMarkers[id];
-    if (m) { const s = spots.find(sp => sp.id === id); if (s) s.likes = likes; }
-  });
-  socket.on('spotRemoved', (id) => { if (spotMarkers[id]) { map.removeLayer(spotMarkers[id]); delete spotMarkers[id]; } });
+function pollSpots() {
+  if (!currentEvent) return;
+  fetch('/api/spots/' + currentEvent.id)
+    .then(r => r.json())
+    .then(list => {
+      const activeIds = new Set(list.map(s => s.id));
+      Object.keys(spotMarkers).forEach(id => {
+        if (!activeIds.has(id)) {
+          map.removeLayer(spotMarkers[id]);
+          delete spotMarkers[id];
+        }
+      });
+      list.forEach(s => {
+        if (spotMarkers[s.id]) {
+          const m = spotMarkers[s.id];
+          if (m.getLatLng().lat !== s.lat || m.getLatLng().lng !== s.lng) {
+            m.setLatLng([s.lat, s.lng]);
+          }
+        } else {
+          addSpotMarker(s);
+        }
+      });
+    });
 }
 
 let showingNearby = false;
@@ -251,10 +307,11 @@ function toggleNearby() {
   $('#nearbyBtn').classList.toggle('active', showingNearby);
   if (!showingNearby) {
     Object.entries(userMarkers).forEach(([k, m]) => { if (k !== '_me') { map.removeLayer(m); delete userMarkers[k]; } });
+  } else {
+    pollUsers();
   }
 }
 
-// ── Modals ──────────────────────────────────────────────────────────
 function openSpotModal() {
   show($('#spotModal'));
   $('#spotLabel').value = '';
@@ -303,7 +360,7 @@ function saveVendor() {
       tags: [],
       user_id: currentUser?.username || 'anon'
     })
-  }).then(() => loadVendors());
+  }).then(() => pollVendors());
   hide($('#vendorModal'));
 }
 
@@ -340,7 +397,6 @@ function saveEvent() {
     .then(() => { hide($('#eventModal')); loadAdminPanel(); });
 }
 
-// ── Admin ───────────────────────────────────────────────────────────
 function loadAdminPanel() {
   fetch('/api/events')
     .then(r => r.json())
@@ -380,5 +436,11 @@ window.switchToEvent = function(id) {
 
 function toggleAdmin() { $('#adminPanel').style.display = $('#adminPanel').style.display === 'none' ? '' : 'none'; loadAdminPanel(); }
 
-// ── Init ────────────────────────────────────────────────────────────
+window.addEventListener('beforeunload', () => {
+  if (currentUser) {
+    navigator.sendBeacon('/api/logout', JSON.stringify({ username: currentUser.username }));
+  }
+  pollingTimers.forEach(clearInterval);
+});
+
 window.addEventListener('load', initLogin);
