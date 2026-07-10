@@ -21,7 +21,12 @@ const vendors = [
 ];
 
 const spots = [];
-app.get('/api/debug/sync', async (req, res) => {
+app.get('/api/update', (req, res) => {
+  const { exec } = require('child_process');
+  exec('cd /app && git pull && npm install', (err, stdout) => {
+    res.json({ ok: !err, output: stdout || (err ? err.message : 'updated') });
+  });
+});, async (req, res) => {
   lastCalendarSync = 0;
   try {
     await syncCalendar();
