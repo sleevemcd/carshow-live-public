@@ -117,7 +117,7 @@ app.get('/api/spots/:eventId', (req, res) => {
 app.post('/api/spots', (req, res) => {
   const { event_id, label, description, lat, lng, spot_type, username } = req.body;
   if (!event_id || !label || lat == null || lng == null) return res.status(400).json({ error: 'event_id, label, lat, lng required' });
-  const expiry = (spot_type === 'car_spot') ? 30 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  const expiry = (spot_type === 'car_spot') ? 30 * 60 * 1000 : (spot_type === 'food') ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   const s = { id: 's-' + Date.now(), event_id, label, description: description || '', lat, lng, spot_type: spot_type || 'spot', username: username || 'anonymous', likes: 0, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + expiry).toISOString() };
   spots.push(s);
   res.json(s);

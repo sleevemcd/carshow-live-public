@@ -117,6 +117,10 @@ input,textarea{outline:none}
 </div>
 <div id="controls">
 <button id="locateBtn" title="Jump to my location">◎ My Location</button>
+<div style="position:relative;margin-top:4px">
+<input type="text" id="mapSearch" placeholder="🔍 Search spots, vendors, VIPs..." style="width:180px;padding:7px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px" />
+<div id="mapSearchResults" style="display:none;position:absolute;top:100%;right:0;width:200px;max-height:150px;overflow-y:auto;background:#18181b;border:1px solid #27272a;border-radius:8px;margin-top:2px;z-index:20"></div>
+</div>
 </div>
 <div id="vendorPopup">
 <h3 id="vpName"></h3><div class="desc" id="vpDesc"></div>
@@ -124,7 +128,7 @@ input,textarea{outline:none}
 <button class="btn-outline btn-sm close" id="closeVendorPopup">Close</button>
 </div>
 <div id="shareBar">
-<button id="shareBtn">📍 Drop Pin</button>
+<button id="shareBtn">📍 I Know a Spot</button>
 <div class="switch-row"><input type="checkbox" id="locationToggle" checked /><span>Share location</span></div>
 </div>
 
@@ -150,11 +154,11 @@ input,textarea{outline:none}
 
 <div class="modal-overlay" id="spotModal" style="display:none">
 <div class="modal">
-<h2>Drop a Pin</h2>
-<label>Type</label><select id="spotType"><option value="spot">📍 Spot (24hr)</option><option value="car_spot">🚗 Car Spot (30min)</option></select>
-<label>Label</label><input type="text" id="spotLabel" placeholder="e.g. Best photo spot" maxlength="80" />
+<h2>I Know a Spot</h2>
+<label>Type</label><select id="spotType"><option value="spot">📍 Spot</option><option value="car_spot">🚗 Car Spot</option><option value="food">🍔 Bomb Ass Food</option></select>
+<label id="spotLabelText">Label</label><input type="text" id="spotLabel" placeholder="e.g. Best photo spot" maxlength="80" />
 <label>Description</label><textarea id="spotDesc" placeholder="Add some details..." maxlength="200"></textarea>
-<div class="btn-row"><button id="cancelSpotBtn" class="btn-outline">Cancel</button><button id="saveSpotBtn" class="btn-primary">Drop Pin</button></div>
+<div class="btn-row"><button id="cancelSpotBtn" class="btn-outline">Cancel</button><button id="saveSpotBtn" class="btn-primary">Post Up</button></div>
 </div>
 </div>
 
@@ -238,7 +242,9 @@ function initMap(){
     $('#eventId').textContent=ev.name;$('#eventLoc').textContent=ev.location_name;
     document.title=ev.name+' — CarShow';
     map=L.map('map',{zoomControl:false,attributionControl:false}).setView([ev.lat,ev.lng],16);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+    var hour=new Date().getHours();
+    var tileUrl=hour>=6&&hour<18?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    L.tileLayer(tileUrl,{maxZoom:19}).addTo(map);
     L.marker([ev.lat,ev.lng],{icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6)"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
     if(ev.radius_meters) L.circle([ev.lat,ev.lng],{radius:ev.radius_meters,color:'#6366f1',fillColor:'#6366f1',fillOpacity:0.05,weight:1}).addTo(map);
     setupHeatmap();
@@ -279,12 +285,26 @@ function initControls(){
   $('#cancelEventBtn').addEventListener('click',()=>hide($('#eventModal')));
   $('#eventScheduleBar').addEventListener('click',function(){var l=$('#eventScheduleList');var t=$('#eventScheduleToggle');if(l.style.display==='none'||!l.style.display){l.style.display='block';t.textContent='▼';loadMapSchedule()}else{l.style.display='none';t.textContent='▲'}});
   loadMapSchedule();
+  $('#mapSearch').addEventListener('input',function(){
+    var q=this.value.toLowerCase().trim();
+    var r=$('#mapSearchResults');
+    if(!q||q.length<2){r.style.display='none';return}
+    var results=[];
+    Object.values(vendorMarkers).forEach(m=>{var n=m.getPopup().getContent().toLowerCase();if(n.includes(q))results.push({el:m,type:'vendor'})});
+    Object.values(spotMarkers).forEach(m=>{var n=m.getPopup().getContent().toLowerCase();if(n.includes(q))results.push({el:m,type:'spot'})});
+    if(results.length){
+      r.innerHTML=results.map((x,i)=>'<div style="padding:6px 10px;font-size:12px;color:#d4d4d8;cursor:pointer;border-bottom:1px solid #27272a" data-idx="'+i+'">'+(x.type==='vendor'?'🏪 ':'📍 ')+x.el.getPopup().getContent().replace(/<[^>]*>/g,'').substring(0,40)+'</div>').join('');
+      r.style.display='block';
+      r.querySelectorAll('div').forEach(d=>d.addEventListener('click',function(){var idx=parseInt(this.dataset.idx);if(results[idx]){results[idx].el.openPopup();map.setView(results[idx].el.getLatLng(),17);r.style.display='none'}}));
+    }else{r.style.display='none'}
+  });
+  $('#mapSearch').addEventListener('blur',function(){setTimeout(function(){$('#mapSearchResults').style.display='none'},200)});
 }
 
 function loadVendors(){fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));vendorMarkers={};list.forEach(addVendorMarker)})}
 function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className:'',html:'<div style="width:40px;height:40px;border-radius:10px;background:#18181b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 12px rgba(245,158,11,0.4);overflow:hidden"><span>🏪</span></div>',iconSize:[40,40],iconAnchor:[20,20]});var m=L.marker([v.lat,v.lng],{icon}).addTo(map).bindPopup('<b>'+esc(v.business_name)+'</b><br>'+esc(v.description)+(v.tags?.length?'<br><small>'+v.tags.map(t=>'#'+t).join(' ')+'</small>':''));m.on('click',()=>{$('#vpName').textContent=v.business_name;$('#vpDesc').textContent=v.description;$('#vpTags').innerHTML=(v.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('');show($('#vendorPopup'))});vendorMarkers[v.id]=m}
 function loadSpots(){fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
-function addSpotMarker(s){var isCar=s.spot_type==='car_spot';var icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});var m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>');m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST'}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+d.likes+'</small>')})});spotMarkers[s.id]=m}
+function addSpotMarker(s){var isCar=s.spot_type==='car_spot';var isFood=s.spot_type==='food';var icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':isFood?'#ef4444':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':isFood?'#fca5a5':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':isFood?'🍔':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});var m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>');m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST'}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+d.likes+'</small>')})});spotMarkers[s.id]=m}
 
 function updateMyMarker(loc){
   if(!map||!loc)return;
@@ -336,9 +356,17 @@ function openSpotModal(){
 function saveSpot(){
   var label=$('#spotLabel').value.trim();
   if(!label||!myLocation)return;
-  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,label,description:$('#spotDesc').value.trim(),lat:myLocation.lat,lng:myLocation.lng,spot_type:$('#spotType').value,username:currentUser?.username||'anon'})});
+  var type=$('#spotType').value;
+  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,label,description:$('#spotDesc').value.trim(),lat:myLocation.lat,lng:myLocation.lng,spot_type:type,username:currentUser?.username||'anon'})});
   hide($('#spotModal'));
 }
+// spot type change updates label placeholder
+$('#spotType').addEventListener('change',function(){
+  var t=this.value;
+  if(t==='car_spot'){$('#spotLabelText').textContent='Car Model';$('#spotLabel').placeholder='e.g. Sick E46 M3'}
+  else if(t==='food'){$('#spotLabelText').textContent='Restaurant Name';$('#spotLabel').placeholder='e.g. Best Tacos in Town'}
+  else{$('#spotLabelText').textContent='Label';$('#spotLabel').placeholder='e.g. Best photo spot'}
+})
 
 function openVendorModal(){show($('#vendorModal'));$('#vendorName').value='';$('#vendorDesc').value='';$('#vendorLat').value='';$('#vendorLng').value=''}
 function saveVendor(){var name=$('#vendorName').value.trim();if(!name)return;var c=map.getCenter();fetch('/api/vendors',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,business_name:name,description:$('#vendorDesc').value.trim(),lat:parseFloat($('#vendorLat').value)||c.lat,lng:parseFloat($('#vendorLng').value)||c.lng,tags:[],user_id:currentUser?.username||'anon'})}).then(()=>pollVendors());hide($('#vendorModal'))}
