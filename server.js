@@ -31,6 +31,36 @@ app.get('/api/debug/sync', async (req, res) => {
   }
 });
 
+// Dummy user management API
+app.get('/api/dummy-users', (req, res) => { res.json(demoUsers); });
+app.post('/api/dummy-users', (req, res) => {
+  var { username, role, lat, lng, event_id } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1' });
+  res.json(demoUsers);
+});
+app.put('/api/dummy-users/:username', (req, res) => {
+  var idx = demoUsers.findIndex(u => u.username === req.params.username);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  Object.assign(demoUsers[idx], req.body);
+  res.json(demoUsers[idx]);
+});
+app.delete('/api/dummy-users/:username', (req, res) => {
+  var idx = demoUsers.findIndex(u => u.username === req.params.username);
+  if (idx >= 0) demoUsers.splice(idx, 1);
+  res.json({ success: true });
+});
+
+// Admin login
+app.post('/api/admin-login', (req, res) => {
+  var { username, password } = req.body;
+  if (username === 'sleve' && password === 'duck') {
+    res.json({ success: true, username: 'sleve' });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
 const HEAT_VALUES = { admin: 0, organizer: 0, sponsor: 3, vendor: 3, vip: 4, registered_user: 2, user: 1, attendee: 1 };
 
 const demoUsers = [
