@@ -450,7 +450,7 @@ function loadMapSchedule(){
     var now=Date.now();
     var sub=list.filter(e=>e.parent_event_id&&e.is_active&&new Date(e.start_date).getTime()>now).sort((a,b)=>new Date(a.start_date).getTime()-new Date(b.start_date).getTime()).slice(0,5);
     $('#eventScheduleNext').textContent=sub.length?sub[0].name+' — '+new Date(sub[0].start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'No upcoming events';
-    $('#eventScheduleList').innerHTML=sub.map(e=>'<div style="padding:6px 0;font-size:12px;border-bottom:1px solid #27272a;display:flex;justify-content:space-between;cursor:pointer" onclick="jumpToEvent(\''+e.id+'\')"><span style="color:#d4d4d8">'+esc(e.name)+'</span><span style="color:#71717a">'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></div>').join('');
+    $('#eventScheduleList').innerHTML=sub.map(e=>'<div style="padding:6px 0;font-size:12px;border-bottom:1px solid #27272a;display:flex;justify-content:space-between;cursor:pointer" onclick="panToEvent(\''+e.id+'\')"><span style="color:#d4d4d8">'+esc(e.name)+'</span><span style="color:#71717a">'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></div>').join('');
   });
 }
 function pollNotifs(){
