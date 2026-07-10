@@ -487,7 +487,7 @@ function showInfoPopup(){
   show($('#vendorPopup'));
   updateFollowBtn();
 }
-window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{map.setView([e.lat,e.lng],16);currentEvent=e;$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;loadVendors();loadSpots();pollUsers()})};
+window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;map.setView([e.lat,e.lng],16);$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;var eid=e.parent_event_id||e.id;var orig=currentEvent;fetch('/api/events/'+eid).then(r=>r.json()).then(pe=>{currentEvent=pe;loadVendors();loadSpots();pollUsers();currentEvent=orig})})};
 window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#eventHQ'));loadEventHQ();initHQControls()})}
 function loadEventMarkers(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
