@@ -103,6 +103,9 @@ input,textarea{outline:none}
 </div>
 
 <div id="dashboardView" style="display:none;position:fixed;inset:0;background:#09090b;overflow-y:auto;z-index:500"><div style="max-width:640px;margin:0 auto;padding:20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px"><div><h1 style="font-size:24px;font-weight:700">Admin Dashboard</h1><p style="color:#71717a;font-size:14px" id="dashRole"></p></div><button id="dashLogoutBtn" class="btn-outline btn-sm">Logout</button></div><div style="display:flex;gap:8px;margin-bottom:20px"><button id="dashNewEventBtn" class="btn-primary btn-sm" style="flex:1">+ New Event</button><button id="dashAddVendorBtn" class="btn-outline btn-sm" style="flex:1">+ Add Vendor</button></div><div style="font-size:12px;color:#71717a;margin-bottom:16px" id="dashEventCount"></div><div id="dashEventList"></div></div></div>
+
+<!-- EVENT HQ (non-admin dashboard) -->
+<div id="eventHQ" style="display:none;position:fixed;inset:0;background:#09090b;overflow-y:auto;z-index:500"><div style="max-width:500px;margin:0 auto;padding:20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px"><div><h1 style="font-size:22px;font-weight:700" id="hqEventName">Event HQ</h1><p style="color:#71717a;font-size:13px" id="hqRole"></p></div><button id="hqLogoutBtn" class="btn-outline btn-sm">Logout</button></div><div id="hqCountdown" style="background:linear-gradient(135deg,#312e81,#4f46e5);border-radius:16px;padding:24px;text-align:center;margin-bottom:20px"><div style="font-size:13px;color:#a5b4fc;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Event Starts In</div><div style="font-size:48px;font-weight:700;color:#fff" id="hqTimer">--:--:--</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px"><button id="hqMapBtn" style="padding:16px;border-radius:12px;background:#18181b;border:1px solid #27272a;color:#d4d4d8;font-size:14px;text-align:left">🗺<br><span style="font-weight:600">View Map</span></button><div style="padding:14px;border-radius:12px;background:#18181b;border:1px solid #27272a"><div style="font-size:12px;color:#71717a;margin-bottom:6px">Share Location</div><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="hqLocationToggle" checked style="accent-color:#4f46e5" /><span style="font-size:13px;color:#d4d4d8">Active</span></label></div><button id="hqDirBtn" style="padding:16px;border-radius:12px;background:#18181b;border:1px solid #27272a;color:#d4d4d8;font-size:14px;text-align:left">📋<br><span style="font-weight:600">Directory</span></button></div><div style="margin-bottom:16px"><h2 style="font-size:14px;font-weight:600;margin-bottom:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px">Upcoming</h2><div id="hqSchedule" style="display:flex;flex-direction:column;gap:8px"></div></div></div></div>
 <div id="app" style="display:none">
 <div id="map"></div>
 <div id="header">
@@ -200,7 +203,7 @@ function handleLogin(role){
     currentEvent=data.event;
     hide($('#loginScreen'));
     if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
-    else{show($('#app'));initMap()}
+    else{show($('#eventHQ'));loadEventHQ();initHQControls()}
   }).catch(()=>{$('#loginError').textContent='Login failed'});
 }
 
@@ -338,8 +341,36 @@ window.switchToEvent=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{cur
 window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#app'));initMap()});
 function toggleAdmin(){var p=$('#adminPanel');p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';if(p.style.display==='block')loadAdminPanel()}
 function initDashboardControls(){$('#dashRole').textContent='Signed in as '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',dashLogout);$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',openVendorModal)}
-function goBack(){if(currentUser&&currentUser.role==='admin'){hide($('#app'));show($('#dashboardView'));loadDashboardEvents();return}dashLogout()}
-function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));show($('#loginScreen'))}
+function goBack(){if(currentUser){if(currentUser.role==='admin'){hide($('#app'));show($('#dashboardView'));loadDashboardEvents();return}hide($('#app'));show($('#eventHQ'));loadEventHQ()}}
+function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));hide($('#eventHQ'));show($('#loginScreen'))}
+function loadEventHQ(){
+  fetch('/api/events').then(r=>r.json()).then(list=>{
+    var master=list.filter(e=>!e.parent_event_id&&e.is_active);
+    var sub=list.filter(e=>e.parent_event_id&&e.is_active);
+    var now=Date.now();
+    var upcoming=master.concat(sub).filter(e=>new Date(e.start_date).getTime()>now).sort((a,b)=>new Date(a.start_date).getTime()-new Date(b.start_date).getTime()).slice(0,4);
+    var first=upcoming[0]||master[0]||currentEvent;
+    if(first) currentEvent=first;
+    $('#hqEventName').textContent=currentEvent?.name||'Event HQ';
+    $('#hqRole').textContent='Signed in as '+currentUser.username;
+    updateCountdown();
+    $('#hqSchedule').innerHTML=upcoming.map(e=>'<div style="padding:12px;border-radius:10px;background:#18181b;border:1px solid #27272a;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:600">'+esc(e.name)+'</div><div style="font-size:12px;color:#71717a">'+esc(e.location_name)+'</div></div><div style="font-size:12px;color:#a5b4fc;white-space:nowrap">'+new Date(e.start_date).toLocaleDateString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div></div>').join('')||'<div style="padding:12px;color:#52525b;text-align:center">No upcoming events</div>';
+  });
+  if(!window._hqTimer) window._hqTimer=setInterval(updateCountdown,1000);
+}
+function updateCountdown(){
+  if(!currentEvent){return}
+  var diff=new Date(currentEvent.start_date).getTime()-Date.now();
+  if(diff<=0){$('#hqTimer').textContent='LIVE NOW';return}
+  var h=Math.floor(diff/3600000);var m=Math.floor((diff%3600000)/60000);var s=Math.floor((diff%60000)/1000);
+  $('#hqTimer').textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function initHQControls(){
+  $('#hqLogoutBtn').addEventListener('click',dashLogout);
+  $('#hqMapBtn').addEventListener('click',()=>{hide($('#eventHQ'));show($('#app'));initMap()});
+  $('#hqLocationToggle').addEventListener('change',function(){fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})})});
+  $('#hqDirBtn').addEventListener('click',()=>{showError('Directory coming soon')});
+}
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
 window.addEventListener('load',initLogin);
 
