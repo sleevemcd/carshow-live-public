@@ -35,7 +35,24 @@ const demoUsers = [
   { username: "exotic_rentals", role: "sponsor", lat: 40.5142, lng: -111.4780, event_id: "demo-event-1" },
 ];
 const users = {};
+const notifications = [];
+const follows = {}; // username -> [vendor_username]
 const USERS_EXPIRY_MS = 60 * 1000;
+
+// Auto-generate event notifications
+setInterval(() => {
+  const now = Date.now();
+  events.forEach(e => {
+    const startMs = new Date(e.start_date).getTime();
+    const diff = startMs - now;
+    if (diff > 0 && diff < 3600000 && diff > 3540000) { // ~1 hour out, within a 1-min window
+      const key = 'event-'+e.id+'-1h';
+      if (!notifications.find(n => n.key === key)) {
+        notifications.unshift({ key, type: 'event', event_id: e.id, message: e.name + ' starts in 1 hour!', created_at: new Date().toISOString() });
+      }
+    }
+  });
+}, 60000);
 
 app.get('/api/events', (req, res) => {
   const all = events.map(e => ({ ...e, child_count: events.filter(c => c.parent_event_id === e.id).length }));
@@ -199,5 +216,12 @@ if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => console.log(`CarShow Live running on http://localhost:${PORT}`));
 }
+
+// Notifications & Follows API
+app.get('/api/notifications', (req, res) => { res.json(notifications.slice(0, 50)); });
+app.delete('/api/notifications/:key', (req, res) => { var i=notifications.findIndex(n=>n.key===req.params.key);if(i>=0)notifications.splice(i,1);res.json({success:true}); });
+app.delete('/api/notifications', (req, res) => { notifications.length=0;res.json({success:true}); });
+app.post('/api/follow', (req, res) => { var {username,follow}=req.body;if(!username||!follow)return res.status(400).json({error:'required'});if(!follows[username])follows[username]=[];if(!follows[username].includes(follow))follows[username].push(follow);res.json({following:follows[username]})});
+app.get('/api/follows/:username', (req, res) => { res.json(follows[req.params.username]||[]); });
 
 module.exports = app;
