@@ -26,14 +26,6 @@ app.get('/api/update', (req, res) => {
   exec('cd /app && git pull && npm install', (err, stdout) => {
     res.json({ ok: !err, output: stdout || (err ? err.message : 'updated') });
   });
-});, async (req, res) => {
-  lastCalendarSync = 0;
-  try {
-    await syncCalendar();
-    res.json({ ok: true, count: events.length, names: events.map(e => e.name) });
-  } catch(e) {
-    res.json({ ok: false, error: e.message });
-  }
 });
 
 // Dummy user management API
