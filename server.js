@@ -113,10 +113,7 @@ async function syncCalendar() {
   } catch(e) { console.log('Calendar sync error:', e.message); }
 }
 
-setInterval(syncCalendar, 5 * 60 * 1000); // Every 5 minutes
-setTimeout(() => { syncCalendar().catch(() => {}) }, 30000); // 30s delay
-
-// Auto-generate event notifications
+// Event notification check (every minute)
 setInterval(() => {
   const now = Date.now();
   events.forEach(e => {
@@ -131,7 +128,17 @@ setInterval(() => {
   });
 }, 60000);
 
-app.get('/api/events', (req, res) => {
+let lastCalendarSync = 0;
+async function syncCalendarIfNeeded() {
+  if (Date.now() - lastCalendarSync > 300000) {
+    lastCalendarSync = Date.now();
+    await syncCalendar().catch(() => {});
+  }
+}
+
+// Trigger sync on every events API call
+app.get('/api/events', async (req, res) => {
+  await syncCalendarIfNeeded();
   const all = events.map(e => ({ ...e, child_count: events.filter(c => c.parent_event_id === e.id).length }));
   res.json(all);
 });
