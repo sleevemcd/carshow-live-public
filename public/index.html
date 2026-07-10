@@ -259,7 +259,6 @@ function initMap(){
     var tileUrl=hour>=6&&hour<18?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     L.tileLayer(tileUrl,{maxZoom:19}).addTo(map);
     L.marker([ev.lat,ev.lng],{icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6)"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
-    if(ev.radius_meters) L.circle([ev.lat,ev.lng],{radius:ev.radius_meters,color:'#6366f1',fillColor:'#6366f1',fillOpacity:0.05,weight:1}).addTo(map);
     setupHeatmap();
     loadVendors();loadSpots();setupLocation();setupPolling();initControls();loadEventMarkers();
   }catch(e){showError('Map error: '+e.message)}
@@ -485,15 +484,14 @@ window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(
 function loadEventMarkers(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
     var now=Date.now();
+    if(window._eventMarkers){Object.values(window._eventMarkers).forEach(m=>map.removeLayer(m))}
+    window._eventMarkers={};
     list.filter(e=>e.is_active&&e.lat&&e.lng).forEach(e=>{
       var diff=new Date(e.start_date).getTime()-now;
-      if(diff>0&&diff<7200000){ // within 2 hours
-        if(!window._eventMarkers)window._eventMarkers={};
-        if(!window._eventMarkers[e.id]){
-          var icon=L.divIcon({className:'',html:'<div style="width:30px;height:30px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6);display:flex;align-items:center;justify-content:center;font-size:14px">📅</div>',iconSize:[30,30],iconAnchor:[15,15]});
-          var m=L.marker([e.lat,e.lng],{icon}).addTo(map).bindPopup('<b>'+esc(e.name)+'</b><br><small>'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</small>'+(e.description?'<br><small>'+esc(e.description.substring(0,80))+'</small>':''));
-          window._eventMarkers[e.id]=m;
-        }
+      if(diff>0&&diff<7200000){
+        var icon=L.divIcon({className:'',html:'<div style="width:30px;height:30px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6);display:flex;align-items:center;justify-content:center;font-size:14px">📅</div>',iconSize:[30,30],iconAnchor:[15,15]});
+        var m=L.marker([e.lat,e.lng],{icon}).addTo(map).bindPopup('<b>'+esc(e.name)+'</b><br><small>'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</small>'+(e.description?'<br><small>'+esc(e.description.substring(0,80))+'</small>':''));
+        window._eventMarkers[e.id]=m;
       }
     });
   });
