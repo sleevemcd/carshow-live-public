@@ -14,11 +14,12 @@ const hide = (el) => el.style.display = 'none';
 const escape = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
 function handleLogin(role) {
-  const username = $('#loginInput').value.trim();
+  let username = $('#loginInput').value.trim();
+  if (!username || username.length < 2) {
+    username = role + '_' + Math.random().toString(36).slice(2, 8);
+  }
   const err = $('#loginError');
   err.textContent = '';
-
-  if (!username || username.length < 2) { err.textContent = 'Enter a username (min 2 chars)'; return; }
 
   fetch('/api/login', {
     method: 'POST',
@@ -64,29 +65,34 @@ function initLogin() {
 }
 
 function initMap() {
-  const ev = currentEvent;
-  $('#eventId').textContent = ev.name;
-  $('#eventLoc').textContent = ev.location_name;
-  document.title = ev.name + ' — CarShow';
+  try {
+    const ev = currentEvent;
+    if (!ev) { console.error('No event data'); return; }
+    $('#eventId').textContent = ev.name;
+    $('#eventLoc').textContent = ev.location_name;
+    document.title = ev.name + ' — CarShow';
 
-  map = L.map('map', { zoomControl: false, attributionControl: false }).setView([ev.lat, ev.lng], 16);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19
-  }).addTo(map);
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([ev.lat, ev.lng], 16);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(map);
 
-  L.marker([ev.lat, ev.lng], {
-    icon: L.divIcon({ className: 'event-pin', html: '<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6);"></div>', iconSize: [24,24], iconAnchor: [12,12] })
-  }).addTo(map);
+    L.marker([ev.lat, ev.lng], {
+      icon: L.divIcon({ className: 'event-pin', html: '<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6);"></div>', iconSize: [24,24], iconAnchor: [12,12] })
+    }).addTo(map);
 
-  if (ev.radius_meters) {
-    L.circle([ev.lat, ev.lng], { radius: ev.radius_meters, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.05, weight: 1 }).addTo(map);
+    if (ev.radius_meters) {
+      L.circle([ev.lat, ev.lng], { radius: ev.radius_meters, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.05, weight: 1 }).addTo(map);
+    }
+
+    loadVendors();
+    loadSpots();
+    setupLocation();
+    setupPolling();
+    initControls();
+  } catch(e) {
+    console.error('Map init error:', e);
   }
-
-  loadVendors();
-  loadSpots();
-  setupLocation();
-  setupPolling();
-  initControls();
 }
 
 function initControls() {
