@@ -38,6 +38,58 @@ const users = {};
 const notifications = [];
 const follows = {}; // username -> [vendor_username]
 const USERS_EXPIRY_MS = 60 * 1000;
+const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/a06502732cdb2e4140be9ba71f0a71cb992e0db60e1a33daa75105c565ab797f%40group.calendar.google.com/public/basic.ics';
+
+// Fetch Google Calendar events
+async function syncCalendar() {
+  try {
+    const https = require('https');
+    const url = new URL(CALENDAR_URL);
+    const ics = await new Promise((resolve, reject) => {
+      https.get(url, (res) => { let d='';res.on('data',c=>d+=c);res.on('end',()=>resolve(d)); }).on('error',reject);
+    });
+    const calEvents = [];
+    const lines = ics.split('\n');
+    let evt = null;
+    for (const line of lines) {
+      if (line.startsWith('BEGIN:VEVENT')) { evt = {}; }
+      else if (line.startsWith('END:VEVENT') && evt) { calEvents.push(evt); evt = null; }
+      else if (evt) {
+        const m = line.match(/^(DTSTART|DTEND|SUMMARY|DESCRIPTION|LOCATION)[^:]*:(.+)/);
+        if (m) {
+          const key = m[1] === 'SUMMARY' ? 'name' : m[1] === 'LOCATION' ? 'loc' : m[1] === 'DESCRIPTION' ? 'desc' : m[1].toLowerCase();
+          if (m[1] === 'DTSTART' || m[1] === 'DTEND') {
+            const v = m[2]; evt[key] = v.length === 8 ? v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6,8)+'T00:00:00Z' : v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6,8)+'T'+v.slice(9,11)+':'+v.slice(11,13)+':'+v.slice(13,15)+'Z';
+          } else { evt[key] = m[2].replace(/\\,/g,',').replace(/\\n/g,' '); }
+        }
+      }
+    }
+    calEvents.forEach(ce => {
+      if (!ce.name) return;
+      const existing = events.find(e => e.name === ce.name && e.start_date && new Date(e.start_date).toISOString().slice(0,10) === (ce.dtstart||'').slice(0,10));
+      if (!existing) {
+        events.push({
+          id: 'cal-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+          organizer_id: 'google-calendar',
+          access_code: '',
+          name: ce.name,
+          description: ce.desc || '',
+          location_name: ce.loc || '',
+          lat: 40.5144, lng: -111.4764,
+          radius_meters: 2000,
+          start_date: ce.dtstart || new Date().toISOString(),
+          end_date: ce.dtend || new Date(Date.now()+86400000*3).toISOString(),
+          is_active: true,
+          parent_event_id: 'demo-event-1',
+          created_at: new Date().toISOString()
+        });
+      }
+    });
+  } catch(e) { console.log('Calendar sync error:', e.message); }
+}
+
+setInterval(syncCalendar, 5 * 60 * 1000); // Every 5 minutes
+syncCalendar();
 
 // Auto-generate event notifications
 setInterval(() => {
