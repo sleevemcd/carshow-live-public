@@ -380,7 +380,7 @@ function pollUsers(){
         var c=rc[u.role]||'#6366f1';
         var isVip=u.role==='vip';
         var icon=L.divIcon({className:'',html:'<div style="width:'+(isVip?36:40)+'px;height:'+(isVip?36:40)+'px;border-radius:'+(isVip?'50%':'10px')+';background:#18181b;border:2px solid '+c+';display:flex;align-items:center;justify-content:center;font-size:'+(isVip?18:20)+'px;box-shadow:0 0 8px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div>'+(isVip?'👤':(u.role==='vendor'?'🏪':'⭐'))+'</div>',iconSize:[isVip?36:40,isVip?36:40],iconAnchor:[isVip?18:20,isVip?18:20]});
-        if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else{var um=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map);var rn=u.role.replace(/_/g,' ');var rd=u.role==='vip'?'VIP — elevated access with profile pin':u.role==='sponsor'?'Sponsor — supporting the event':u.role==='vendor'?'Vendor — selling goods at the event':rn;um.bindPopup('<div style="min-width:160px"><b>'+esc(u.username)+'</b><br><span style="color:#a1a1aa;font-size:12px">'+rd+'</span><br><button id="popupFollow_'+u.username+'" class="btn-outline btn-sm" style="margin-top:8px;width:100%;font-size:11px;padding:4px" onclick="toggleFollow(\''+u.username+'\',\''+esc(u.username)+'\',\''+u.role+'\')">+ Follow</button></div>');um.on('click',function(){setTimeout(function(){updateFollowBtnUI(u.username)},50)});userMarkers[u.username]=um}
+        if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else{var um=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map);var rn=u.role.replace(/_/g,' ');var rd=u.blurb||(u.role==='vip'?'VIP — elevated access with profile pin':u.role==='sponsor'?'Sponsor — supporting the event':u.role==='vendor'?'Vendor — selling goods at the event':u.role==='super_user'?'Super User — maximum heat':rn);var off=u.offering?'<br><small style=\"color:#f59e0b\">🏷 '+u.offering.replace(/,/g,', ')+'</small>':'';um.bindPopup('<div style="min-width:160px"><b>'+esc(u.username)+'</b><br><span style="color:#a1a1aa;font-size:12px">'+rd+'</span>'+off+'<br><button id="popupFollow_'+u.username+'" class="btn-outline btn-sm" style="margin-top:8px;width:100%;font-size:11px;padding:4px" onclick="toggleFollow(\''+u.username+'\',\''+esc(u.username)+'\',\''+u.role+'\')">+ Follow</button></div>');um.on('click',function(){setTimeout(function(){updateFollowBtnUI(u.username)},50)});userMarkers[u.username]=um}
       }
     });
     if(heatLayer&&heatPoints.length)heatLayer.setLatLngs(heatPoints);
@@ -422,23 +422,31 @@ function toggleAdmin(){var p=$('#adminPanel');p.style.display=(p.style.display==
 function initDashboardControls(){$('#dashRole').textContent='Signed in as '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',dashLogout);$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',openVendorModal);$('#dashNewUserBtn').addEventListener('click',function(){openDummyUserModal()});$('#saveDummyUserBtn').addEventListener('click',saveDummyUser);$('#cancelDummyUserBtn').addEventListener('click',()=>hide($('#dummyUserModal')));loadDummyUsers()}
 function loadDummyUsers(){
   fetch('/api/dummy-users').then(r=>r.json()).then(list=>{
-    $('#dummyUserList').innerHTML=list.map(u=>'<div style="padding:8px 0;border-bottom:1px solid #27272a;display:flex;justify-content:space-between;align-items:center"><div><span style="font-size:13px;color:#d4d4d8">'+esc(u.username)+'</span><span style="font-size:11px;color:#71717a;margin-left:8px">'+esc(u.role)+'</span><span style="font-size:11px;color:#52525b;margin-left:4px">('+u.lat+','+u.lng+')</span></div><div style="display:flex;gap:4px"><button class="btn-outline btn-sm" style="font-size:10px;padding:2px 8px" onclick="editDummyUser(\''+u.username+'\')">Edit</button><button class="btn-danger btn-sm" style="font-size:10px;padding:2px 8px" onclick="deleteDummyUser(\''+u.username+'\')">Del</button></div></div>').join('')||'<p style="color:#52525b;text-align:center;padding:10px">No dummy users</p>';
+    $('#dummyUserList').innerHTML=list.map(u=>'<div style="padding:8px 0;border-bottom:1px solid #27272a"><div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-size:13px;color:#d4d4d8">'+esc(u.username)+'</span><span style="font-size:11px;color:#71717a;margin-left:8px">'+esc(u.role)+'</span></div><div style="display:flex;gap:4px;align-items:center"><button class="btn-outline btn-sm" style="font-size:10px;padding:2px 8px" onclick="editDummyUser(\''+u.username+'\')">Edit</button><button class="btn-danger btn-sm" style="font-size:10px;padding:2px 8px" onclick="deleteDummyUser(\''+u.username+'\')">Del</button></div></div><div style="display:flex;gap:8px;margin-top:4px;font-size:11px;color:#52525b"><span>📍 '+u.lat+','+u.lng+'</span><span>'+(u.offering||'no offering')+'</span></div><div style="display:flex;gap:8px;margin-top:4px"><button onclick="toggleDummyField(\''+u.username+'\',\'locationEnabled\','+!u.locationEnabled+')" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';background:transparent;color:'+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';cursor:pointer">📍 '+(u.locationEnabled!==false?'Sharing':'Off')+'</button><button onclick="toggleDummyOffering(\''+u.username+'\')" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.offering?'#f59e0b':'#52525b')+';background:transparent;color:'+(u.offering?'#f59e0b':'#52525b')+';cursor:pointer">🏷 '+(u.offering?'Active':'Off')+'</button></div></div>').join('')||'<p style="color:#52525b;text-align:center;padding:10px">No dummy users</p>';
   });
 }
 function openDummyUserModal(u){
   show($('#dummyUserModal'));$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
   $('#dummyUsername').value=u?u.username:'';$('#dummyUsername').disabled=!!u;
-  $('#dummyRole').value=u?u.role:'attendee';$('#dummyLat').value=u?u.lat:40.5144;$('#dummyLng').value=u?u.lng:-111.4764;$('#dummyEventId').value=u?u.event_id:'demo-event-1';
+  $('#dummyDisplay').value=u&&u.display?u.display:'';$('#dummyRole').value=u?u.role:'attendee';
+  $('#dummyBlurb').value=u&&u.blurb?u.blurb:'';
+  $('#dummyLat').value=u?u.lat:40.5144;$('#dummyLng').value=u?u.lng:-111.4764;
+  $('#dummyLocationOn').checked=u?u.locationEnabled!==false:true;
+  document.querySelectorAll('.dummyOffer').forEach(cb=>{cb.checked=u&&u.offering?u.offering.split(',').includes(cb.value):false});
 }
 function saveDummyUser(){
   var username=$('#dummyUsername').value.trim();if(!username)return;
-  var data={username,role:$('#dummyRole').value,lat:parseFloat($('#dummyLat').value)||40.5144,lng:parseFloat($('#dummyLng').value)||-111.4764,event_id:$('#dummyEventId').value||'demo-event-1'};
+  var offers=[];document.querySelectorAll('.dummyOffer:checked').forEach(cb=>offers.push(cb.value));
+  var data={username,display:$('#dummyDisplay').value.trim(),role:$('#dummyRole').value,blurb:$('#dummyBlurb').value.trim(),lat:parseFloat($('#dummyLat').value)||40.5144,lng:parseFloat($('#dummyLng').value)||-111.4764,event_id:'demo-event-1',offering:offers.join(','),locationEnabled:$('#dummyLocationOn').checked};
   var isEdit=$('#dummyUsername').disabled;
   var m=isEdit?'PUT':'POST';var u=isEdit?'/api/dummy-users/'+username:'/api/dummy-users';
   fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#dummyUserModal'));loadDummyUsers()});
 }
+function pickMapCenter(){if(map){var c=map.getCenter();$('#dummyLat').value=c.lat.toFixed(6);$('#dummyLng').value=c.lng.toFixed(6)}}
 window.editDummyUser=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u)openDummyUserModal(u)})};
 window.deleteDummyUser=function(username){if(confirm('Delete '+username+'?'))fetch('/api/dummy-users/'+username,{method:'DELETE'}).then(()=>loadDummyUsers())};
+window.toggleDummyField=function(username,field,val){fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:val})}).then(()=>loadDummyUsers())};
+window.toggleDummyOffering=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u){var has=!!u.offering;var v=has?'':prompt('Offerings (comma-separated): swag,giveaway,merch,poker,photo',u.offering||'');if(v!==null)fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:v})}).then(()=>loadDummyUsers())}})};
 function goBack(){if(currentUser){if(currentUser.role==='admin'){hide($('#app'));show($('#eventHQ'));loadEventHQ();return}hide($('#app'));show($('#eventHQ'));loadEventHQ()}}
 function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));hide($('#eventHQ'));show($('#loginScreen'))}
 function loadEventHQ(){
@@ -564,9 +572,20 @@ window.addEventListener('load',initLogin);
 <div class="modal">
 <h2 id="dummyUserTitle">Add User</h2>
 <label>Username</label><input type="text" id="dummyUsername" placeholder="e.g. bmwfanatic" />
-<label>Role</label><select id="dummyRole"><option value="attendee">Attendee</option><option value="user">User</option><option value="registered_user">Registered User</option><option value="vip">VIP</option><option value="vendor">Vendor</option><option value="sponsor">Sponsor</option><option value="organizer">Organizer</option></select>
-<div style="display:flex;gap:8px"><div style="flex:1"><label>Lat</label><input type="number" id="dummyLat" step="any" placeholder="40.5144" /></div><div style="flex:1"><label>Lng</label><input type="number" id="dummyLng" step="any" placeholder="-111.4764" /></div></div>
-<label>Event ID</label><input type="text" id="dummyEventId" value="demo-event-1" />
+<label>Display Name</label><input type="text" id="dummyDisplay" placeholder="Screen name" />
+<label>Role</label><select id="dummyRole"><option value="attendee">Attendee</option><option value="user">User</option><option value="registered_user">Registered User</option><option value="vip">VIP</option><option value="super_user">Super User</option><option value="vendor">Vendor</option><option value="sponsor">Sponsor</option></select>
+<label>Info Blurb</label><input type="text" id="dummyBlurb" placeholder="Short description shown in popup" />
+<label>Location</label>
+<div style="display:flex;gap:8px"><input type="number" id="dummyLat" step="any" placeholder="Lat" style="flex:1" /><input type="number" id="dummyLng" step="any" placeholder="Lng" style="flex:1" /><button class="btn-outline btn-sm" onclick="pickMapCenter()" style="white-space:nowrap">📍 Map Center</button></div>
+<label>Offering <span style="color:#52525b;font-size:11px">(what they're offering — multi-select)</span></label>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+<label style="font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:4px"><input type="checkbox" class="dummyOffer" value="swag" /> Swag</label>
+<label style="font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:4px"><input type="checkbox" class="dummyOffer" value="giveaway" /> Giveaways</label>
+<label style="font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:4px"><input type="checkbox" class="dummyOffer" value="merch" /> Merch</label>
+<label style="font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:4px"><input type="checkbox" class="dummyOffer" value="poker" /> Poker Run</label>
+<label style="font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:4px"><input type="checkbox" class="dummyOffer" value="photo" /> Photo Op</label>
+</div>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dummyLocationOn" checked /> Location sharing on</label>
 <div class="btn-row"><button id="cancelDummyUserBtn" class="btn-outline">Cancel</button><button id="saveDummyUserBtn" class="btn-primary">Save</button></div>
 </div>
 </div>

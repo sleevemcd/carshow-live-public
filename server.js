@@ -34,9 +34,9 @@ app.get('/api/debug/sync', async (req, res) => {
 // Dummy user management API
 app.get('/api/dummy-users', (req, res) => { res.json(demoUsers); });
 app.post('/api/dummy-users', (req, res) => {
-  var { username, role, lat, lng, event_id } = req.body;
+  var { username, role, lat, lng, event_id, blurb, offering, locationEnabled } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
-  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1' });
+  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1', blurb: blurb || '', offering: offering || '', locationEnabled: locationEnabled !== false });
   res.json(demoUsers);
 });
 app.put('/api/dummy-users/:username', (req, res) => {
@@ -61,7 +61,7 @@ app.post('/api/admin-login', (req, res) => {
   }
 });
 
-const HEAT_VALUES = { admin: 0, organizer: 0, sponsor: 3, vendor: 3, vip: 4, registered_user: 2, user: 1, attendee: 1 };
+const HEAT_VALUES = { admin: 0, organizer: 0, sponsor: 3, vendor: 3, vip: 4, super_user: 10, registered_user: 2, user: 1, attendee: 1 };
 
 const demoUsers = [
   { username: "bmwfanatic", role: "registered_user", lat: 40.5140, lng: -111.4760, event_id: "demo-event-1" },
@@ -331,8 +331,8 @@ app.get('/api/users/:eventId', (req, res) => {
   ).map(u => ({
     username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1
   }));
-  const demo = demoUsers.filter(u => u.event_id === req.params.eventId)
-    .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1 }));
+    const demo = demoUsers.filter(u => u.event_id === req.params.eventId)
+    .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', locationEnabled: u.locationEnabled !== false }));
   res.json([...real, ...demo]);
 });
 
