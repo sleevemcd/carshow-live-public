@@ -84,7 +84,7 @@ input,textarea{outline:none}
 <input type="text" id="loginCode" placeholder="Enter code if you have one" maxlength="10" autocomplete="off" />
 </div>
 </div>
-<input type="email" id="loginEmail" placeholder="Enter your email" autocomplete="off" />
+<input type="text" id="loginEmail" placeholder="Enter your email (or leave blank)" autocomplete="off" />
 <button id="loginBtn" class="btn-primary">Join Event</button>
 <div id="loginError" class="error"></div>
 <div class="demo-section">
@@ -237,7 +237,7 @@ function handleLogin(role){
 
 function initLogin(){
   $('#loginBtn').addEventListener('click',()=>handleLogin('user'));
-  $('#loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin('user')});
+  $('#loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();handleLogin('user')}});
   ['organizer','sponsor','vendor','vip','registered_user','user'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
 }
 function showError(msg){
