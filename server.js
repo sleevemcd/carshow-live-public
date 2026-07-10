@@ -68,8 +68,14 @@ async function syncCalendar() {
       if (existing) return;
       
       let parentId = undefined;
-      let cleanDesc = ce.desc || '';
-      let rollIn = undefined, showStart = undefined, calLat=undefined, calLng=undefined;
+      let cleanDesc = (ce.desc || '').replace(/\\,/g,',').replace(/\\n/g,' ').replace(/ \+ /g,'\n');
+      let rollIn = undefined, showStart = undefined, calLat=undefined, calLng=undefined, parentName=undefined;
+      let isMaster = /type:\s*master/i.test(cleanDesc);
+      
+      // Extract parent
+      let pm = cleanDesc.match(/parent:\s*(.+?)(?:\n|$)/i);
+      if (pm) { parentName = pm[1].trim(); cleanDesc = cleanDesc.replace(/parent:\s*.+/i,'').trim(); }
+      
       let rim = cleanDesc.match(/roll_in:\s*(.+)/i);
       if (rim) { rollIn = new Date(rim[1].trim()).toISOString(); cleanDesc = cleanDesc.replace(/roll_in:\s*.+/i,'').trim(); }
       let ssm = cleanDesc.match(/show_start:\s*(.+)/i);
@@ -77,16 +83,12 @@ async function syncCalendar() {
       let latm=cleanDesc.match(/lat:\s*([\d.]+)/i); if(latm){calLat=parseFloat(latm[1]);cleanDesc=cleanDesc.replace(/lat:\s*[\d.]+/i,'').trim()}
       let lngm=cleanDesc.match(/lng:\s*([\d.-]+)/i); if(lngm){calLng=parseFloat(lngm[1]);cleanDesc=cleanDesc.replace(/lng:\s*[\d.-]+/i,'').trim()}
       
-      if (cleanDesc.includes('type: master')) {
+      if (isMaster) {
         parentId = undefined;
         cleanDesc = cleanDesc.replace(/type:\s*master\s*/i, '').trim();
-      } else {
-        const parentMatch = cleanDesc.match(/parent:\s*(.+?)(?:\n|$)/i);
-        if (parentMatch) {
-          const parent = events.find(e => e.name.toLowerCase() === parentMatch[1].trim().toLowerCase());
-          if (parent) parentId = parent.id;
-          cleanDesc = cleanDesc.replace(/parent:\s*.+/i, '').trim();
-        }
+      } else if (parentName) {
+        const parent = events.find(e => e.name.toLowerCase() === parentName.toLowerCase());
+        if (parent) parentId = parent.id;
       }
       
       if (!parentId) parentId = 'demo-event-1';
