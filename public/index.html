@@ -261,7 +261,7 @@ function initMap(){
     L.marker([ev.lat,ev.lng],{icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6)"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
     if(ev.radius_meters) L.circle([ev.lat,ev.lng],{radius:ev.radius_meters,color:'#6366f1',fillColor:'#6366f1',fillOpacity:0.05,weight:1}).addTo(map);
     setupHeatmap();
-    loadVendors();loadSpots();setupLocation();setupPolling();initControls();
+    loadVendors();loadSpots();setupLocation();setupPolling();initControls();loadEventMarkers();
   }catch(e){showError('Map error: '+e.message)}
 }
 
@@ -422,7 +422,7 @@ function loadEventHQ(){
     $('#hqCountdownLabel').textContent=(currentEvent?.name||'Event')+' starts in';
     $('#hqMapImg').src='https://staticmap.openstreetmap.de/staticmap.php?center='+currentEvent.lat+','+currentEvent.lng+'&zoom=14&size=500x180&maptype=mapnik';
     updateCountdown();
-    $('#hqSchedule').innerHTML=upcoming.map(e=>'<div style="padding:12px;border-radius:10px;background:#18181b;border:1px solid #27272a;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:600">'+esc(e.name)+'</div><div style="font-size:12px;color:#71717a">'+esc(e.location_name)+'</div></div><div style="font-size:12px;color:#a5b4fc;white-space:nowrap">'+new Date(e.start_date).toLocaleDateString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div></div>').join('')||'<div style="padding:12px;color:#52525b;text-align:center">No upcoming events</div>';
+    $('#hqSchedule').innerHTML=upcoming.map(e=>'<div style="padding:12px;border-radius:10px;background:#18181b;border:1px solid #27272a;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="jumpToEvent(\''+e.id+'\')"><div><div style="font-size:14px;font-weight:600">'+esc(e.name)+'</div><div style="font-size:12px;color:#71717a">'+esc(e.location_name)+'</div></div><div style="font-size:12px;color:#a5b4fc;white-space:nowrap">'+new Date(e.start_date).toLocaleDateString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div></div>').join('')||'<div style="padding:12px;color:#52525b;text-align:center">No upcoming events</div>';
   });
   if(!window._hqTimer) window._hqTimer=setInterval(updateCountdown,1000);
 }
@@ -452,7 +452,7 @@ function loadMapSchedule(){
     var now=Date.now();
     var upcoming=list.filter(e=>e.is_active&&new Date(e.start_date).getTime()>now).sort((a,b)=>new Date(a.start_date).getTime()-new Date(b.start_date).getTime()).slice(0,5);
     $('#eventScheduleNext').textContent=upcoming.length?upcoming[0].name+' — '+new Date(upcoming[0].start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'No upcoming events';
-    $('#eventScheduleList').innerHTML=upcoming.map(e=>'<div style="padding:6px 0;font-size:12px;border-bottom:1px solid #27272a;display:flex;justify-content:space-between"><span style="color:#d4d4d8">'+esc(e.name)+'</span><span style="color:#71717a">'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></div>').join('');
+    $('#eventScheduleList').innerHTML=upcoming.map(e=>'<div style="padding:6px 0;font-size:12px;border-bottom:1px solid #27272a;display:flex;justify-content:space-between;cursor:pointer" onclick="jumpToEvent(\''+e.id+'\')"><span style="color:#d4d4d8">'+esc(e.name)+'</span><span style="color:#71717a">'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</span></div>').join('');
   });
 }
 function pollNotifs(){
@@ -479,6 +479,23 @@ function updateFollowBtn(){
     var f=list.includes(currentVendor.user_id);
     $('#vpFollowBtn').textContent=f?'✓ Following':'+ Follow';
     $('#vpFollowBtn').style.color=f?'#22c55e':'';
+  });
+}
+window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#eventHQ'));hide($('#dashboardView'));show($('#app'));initMap()})}
+function loadEventMarkers(){
+  fetch('/api/events').then(r=>r.json()).then(list=>{
+    var now=Date.now();
+    list.filter(e=>e.is_active&&e.lat&&e.lng).forEach(e=>{
+      var diff=new Date(e.start_date).getTime()-now;
+      if(diff>0&&diff<7200000){ // within 2 hours
+        if(!window._eventMarkers)window._eventMarkers={};
+        if(!window._eventMarkers[e.id]){
+          var icon=L.divIcon({className:'',html:'<div style="width:30px;height:30px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6);display:flex;align-items:center;justify-content:center;font-size:14px">📅</div>',iconSize:[30,30],iconAnchor:[15,15]});
+          var m=L.marker([e.lat,e.lng],{icon}).addTo(map).bindPopup('<b>'+esc(e.name)+'</b><br><small>'+new Date(e.start_date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'</small>'+(e.description?'<br><small>'+esc(e.description.substring(0,80))+'</small>':''));
+          window._eventMarkers[e.id]=m;
+        }
+      }
+    });
   });
 }
 window.dismissNotif=dismissNotif;
