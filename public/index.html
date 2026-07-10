@@ -432,6 +432,8 @@ function openDummyUserModal(u){
   $('#dummyDisplay').value=u&&u.display?u.display:'';$('#dummyRole').value=u?u.role:'attendee';
   $('#dummyBlurb').value=u&&u.blurb?u.blurb:'';
   $('#dummyCar').value=u&&u.car?u.car:'';
+  $('#dummyInsta').value=u&&u.instagram?u.instagram:'';
+  $('#dummyPhoto').value=u&&u.car_photo?u.car_photo:'';
   $('#dummyLat').value=u?u.lat:40.5144;$('#dummyLng').value=u?u.lng:-111.4764;
   $('#dummyLocationOn').checked=u?u.locationEnabled!==false:true;
   document.querySelectorAll('.dummyOffer').forEach(cb=>{cb.checked=u&&u.offering?u.offering.split(',').includes(cb.value):false});
@@ -439,7 +441,7 @@ function openDummyUserModal(u){
 function saveDummyUser(){
   var username=$('#dummyUsername').value.trim();if(!username)return;
   var offers=[];document.querySelectorAll('.dummyOffer:checked').forEach(cb=>offers.push(cb.value));
-  var data={username,display:$('#dummyDisplay').value.trim(),role:$('#dummyRole').value,blurb:$('#dummyBlurb').value.trim(),car:$('#dummyCar').value.trim(),lat:parseFloat($('#dummyLat').value)||40.5144,lng:parseFloat($('#dummyLng').value)||-111.4764,event_id:'demo-event-1',offering:offers.join(','),locationEnabled:$('#dummyLocationOn').checked};
+  var data={username,display:$('#dummyDisplay').value.trim(),role:$('#dummyRole').value,blurb:$('#dummyBlurb').value.trim(),car:$('#dummyCar').value.trim(),instagram:$('#dummyInsta').value.trim(),car_photo:$('#dummyPhoto').value.trim(),lat:parseFloat($('#dummyLat').value)||40.5144,lng:parseFloat($('#dummyLng').value)||-111.4764,event_id:'demo-event-1',offering:offers.join(','),locationEnabled:$('#dummyLocationOn').checked};
   var isEdit=$('#dummyUsername').disabled;
   var m=isEdit?'PUT':'POST';var u=isEdit?'/api/dummy-users/'+username:'/api/dummy-users';
   fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#dummyUserModal'));loadDummyUsers()});
@@ -485,7 +487,16 @@ function initHQControls(){
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,enabled:this.checked})});
     this.parentElement.querySelector('span').textContent=this.checked?'On':'Off';
   });
-  $('#hqDirBtn').addEventListener('click',()=>{showError('Directory coming soon')});
+  $('#hqDirBtn').addEventListener('click',()=>{show($('#directoryModal'));loadDirectory()});
+  $('#closeDirBtn').addEventListener('click',()=>hide($('#directoryModal')));
+  $('#dirSearch').addEventListener('input',loadDirectory);
+}
+function loadDirectory(){
+  var q=($('#dirSearch').value||'').toLowerCase().trim();
+  fetch('/api/dummy-users').then(r=>r.json()).then(list=>{
+    var filtered=q?list.filter(u=>(u.username||'').toLowerCase().includes(q)||(u.car||'').toLowerCase().includes(q)||(u.instagram||'').toLowerCase().includes(q)||(u.role||'').includes(q)):list;
+    $('#dirList').innerHTML=filtered.length?filtered.map(u=>'<div style="padding:12px;border-bottom:1px solid #27272a;display:flex;gap:12px;align-items:center"><div style="width:48px;height:48px;border-radius:10px;background:#1f1f23;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px">'+(u.car_photo?'<img src="'+u.car_photo+'" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML=\'🚗\'">':'🚗')+'</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;color:#d4d4d8">'+esc(u.username)+'</div><div style="font-size:12px;color:#71717a">'+esc(u.car||'No car listed')+'</div>'+(u.instagram?'<div style="font-size:12px;color:#a5b4fc">@'+esc(u.instagram)+'</div>':'')+'<div style="font-size:11px;color:#52525b">'+esc(u.role)+'</div></div></div>').join(''):'<p style="color:#52525b;text-align:center;padding:20px">No users found</p>';
+  });
 }
 function loadMapSchedule(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
@@ -591,7 +602,13 @@ window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon(
 window.addEventListener('load',initLogin);
 
 </script>
-<div class="modal-overlay" id="dummyUserModal" style="display:none">
+<div class="modal-overlay" id="directoryModal" style="display:none">
+<div class="modal" style="max-width:500px;max-height:80vh;overflow-y:auto">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2>📋 Directory</h2><button id="closeDirBtn" class="btn-outline btn-sm">✕</button></div>
+<input type="text" id="dirSearch" placeholder="🔍 Search by car, username, or instagram..." style="margin-bottom:12px" />
+<div id="dirList"></div>
+</div>
+</div>
 <div class="modal">
 <h2 id="dummyUserTitle">Add User</h2>
 <label>Username</label><input type="text" id="dummyUsername" placeholder="e.g. bmwfanatic" />
@@ -599,6 +616,8 @@ window.addEventListener('load',initLogin);
 <label>Role</label><select id="dummyRole"><option value="attendee">Attendee</option><option value="user">User</option><option value="registered_user">Registered User</option><option value="vip">VIP</option><option value="super_user">Super User</option><option value="vendor">Vendor</option><option value="sponsor">Sponsor</option></select>
 <label>Info Blurb</label><input type="text" id="dummyBlurb" placeholder="Short description shown in popup" />
 <label>Car</label><input type="text" id="dummyCar" placeholder="e.g. 2020 BMW M3 Competition" />
+<label>Instagram</label><input type="text" id="dummyInsta" placeholder="@username (no @ needed)" />
+<label>Car Photo URL</label><input type="text" id="dummyPhoto" placeholder="https://..." />
 <label>Location</label>
 <div style="display:flex;gap:8px"><input type="number" id="dummyLat" step="any" placeholder="Lat" style="flex:1" /><input type="number" id="dummyLng" step="any" placeholder="Lng" style="flex:1" /><button class="btn-outline btn-sm" onclick="pickMapCenter()" style="white-space:nowrap">📍 Map Center</button></div>
 <label>Offering <span style="color:#52525b;font-size:11px">(what they're offering — multi-select)</span></label>

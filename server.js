@@ -33,7 +33,7 @@ app.get('/api/dummy-users', (req, res) => { res.json(demoUsers); });
 app.post('/api/dummy-users', (req, res) => {
   var { username, role, lat, lng, event_id, blurb, offering, locationEnabled } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
-  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1', blurb: blurb || '', offering: offering || '', locationEnabled: locationEnabled !== false, car: car || '' });
+  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1', blurb: blurb || '', offering: offering || '', locationEnabled: locationEnabled !== false, car: car || '', instagram: instagram || '', car_photo: car_photo || '' });
   res.json(demoUsers);
 });
 app.put('/api/dummy-users/:username', (req, res) => {
@@ -329,7 +329,7 @@ app.get('/api/users/:eventId', (req, res) => {
     username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1
   }));
     const demo = demoUsers.filter(u => u.event_id === req.params.eventId && u.locationEnabled !== false)
-    .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', car: u.car || '', locationEnabled: u.locationEnabled !== false }));
+    .map(u => ({ username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', car: u.car || '', instagram: u.instagram || '', car_photo: u.car_photo || '', locationEnabled: u.locationEnabled !== false }));
   res.json([...real, ...demo]);
 });
 
