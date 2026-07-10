@@ -408,7 +408,7 @@ window.switchToEvent=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{cur
 window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#app'));initMap()});
 function toggleAdmin(){var p=$('#adminPanel');p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';if(p.style.display==='block')loadAdminPanel()}
 function initDashboardControls(){$('#dashRole').textContent='Signed in as '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',dashLogout);$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',openVendorModal)}
-function goBack(){if(currentUser){if(currentUser.role==='admin'){hide($('#app'));show($('#dashboardView'));loadDashboardEvents();return}hide($('#app'));show($('#eventHQ'));loadEventHQ()}}
+function goBack(){if(currentUser){if(currentUser.role==='admin'){hide($('#app'));show($('#eventHQ'));loadEventHQ();return}hide($('#app'));show($('#eventHQ'));loadEventHQ()}}
 function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));hide($('#eventHQ'));show($('#loginScreen'))}
 function loadEventHQ(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
@@ -488,7 +488,8 @@ function showInfoPopup(){
   show($('#vendorPopup'));
   updateFollowBtn();
 }
-window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#eventHQ'));hide($('#dashboardView'));show($('#app'));initMap()})}
+window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{map.setView([e.lat,e.lng],16);currentEvent=e;$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;loadVendors();loadSpots();pollUsers()})};
+window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#eventHQ'));loadEventHQ();initHQControls()})}
 function loadEventMarkers(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
     var now=Date.now();
