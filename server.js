@@ -21,6 +21,16 @@ const vendors = [
 ];
 
 const spots = [];
+app.get('/api/debug/sync', async (req, res) => {
+  lastCalendarSync = 0;
+  try {
+    await syncCalendar();
+    res.json({ ok: true, count: events.length, names: events.map(e => e.name) });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 const HEAT_VALUES = { admin: 0, organizer: 0, sponsor: 3, vendor: 3, vip: 4, registered_user: 2, user: 1, attendee: 1 };
 
 const demoUsers = [
@@ -138,7 +148,7 @@ async function syncCalendarIfNeeded() {
 
 // Trigger sync on every events API call
 app.get('/api/events', async (req, res) => {
-  await syncCalendarIfNeeded();
+  try { await syncCalendarIfNeeded(); } catch(e) { console.log('sync error:', e.message); }
   const all = events.map(e => ({ ...e, child_count: events.filter(c => c.parent_event_id === e.id).length }));
   res.json(all);
 });
