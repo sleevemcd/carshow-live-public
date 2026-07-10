@@ -90,7 +90,6 @@ input,textarea{outline:none}
 <div class="demo-section">
 <p>Demo — Quick Sign In</p>
 <div class="demo-roles">
-<button class="btn-outline btn-sm login-admin">Admin</button>
 <button class="btn-outline btn-sm login-organizer">Organizer</button>
 <button class="btn-outline btn-sm login-sponsor">Sponsor</button>
 <button class="btn-outline btn-sm login-vendor">Vendor</button>
@@ -239,7 +238,8 @@ function handleLogin(role){
 function initLogin(){
   $('#loginBtn').addEventListener('click',()=>handleLogin('user'));
   $('#loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin('user')});
-  ['admin','organizer','sponsor','vendor','vip','registered_user','user'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
+  ['organizer','sponsor','vendor','vip','registered_user','user'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
+}
 function showError(msg){
   var el=document.createElement('div');
   el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;z-index:9999;color:#f4f4f5;text-align:center;font-size:14px';
