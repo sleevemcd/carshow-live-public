@@ -180,13 +180,25 @@ input,textarea{outline:none}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ── App JS ──────────────────────────────────────────────────────────
 let map, currentUser=null, currentEvent=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
 let showingNearby=false, locationWatchId=null;
 
 const $=s=>document.querySelector(s), show=el=>el.style.display='block', hide=el=>el.style.display='none';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+
+function showError(msg){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;z-index:9999;color:#f4f4f5;text-align:center;font-size:14px;';
+  el.innerHTML='<p>'+msg+'</p><button onclick="this.parentElement.remove()" style="margin-top:8px;padding:6px 14px;border-radius:8px;background:#4f46e5;color:#fff;border:none;cursor:pointer">OK</button>';
+  document.body.appendChild(el);
+}
+
+function updateMyMarker(loc){
+  if(!map||!loc)return;
+  if(userMarkers._me){userMarkers._me.setLatLng([loc.lat,loc.lng])}
+  else{const icon=L.divIcon({className:'',html:'<div style="width:16px;height:16px;border-radius:50%;background:#22c55e;border:3px solid #4ade80;box-shadow:0 0 12px rgba(34,197,94,0.6)"></div>',iconSize:[16,16],iconAnchor:[8,8]});userMarkers._me=L.marker([loc.lat,loc.lng],{icon,zIndexOffset:200}).addTo(map)}
+}
 
 function handleLogin(role){
   let username=$('#loginInput').value.trim();
@@ -218,13 +230,6 @@ function initLogin(){
   ['admin','organizer','vendor','attendee'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
 }
 
-function showError(msg){
-  const el=document.createElement('div');
-  el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;z-index:9999;color:#f4f4f5;text-align:center;font-size:14px;';
-  el.innerHTML='<p>'+msg+'</p><button onclick="this.parentElement.remove()" style="margin-top:8px;padding:6px 14px;border-radius:8px;background:#4f46e5;color:#fff;border:none;cursor:pointer">OK</button>';
-  document.body.appendChild(el);
-}
-
 function initMap(){
   try{
     const ev=currentEvent;
@@ -244,7 +249,6 @@ function initControls(){
   const role=currentUser?.role;
   $('#backBtn').addEventListener('click',logout);
   if(role==='admin'){
-    
     show($('#adminPanelBtn'));
     $('#adminPanelBtn').addEventListener('click',toggleAdmin);
     $('#closeAdmin').addEventListener('click',()=>hide($('#adminPanel')));
@@ -253,7 +257,6 @@ function initControls(){
     loadAdminPanel();
     show($('#adminPanel'));
   }
-  
   $('#shareBtn').addEventListener('click',openSpotModal);
   $('#nearbyBtn').addEventListener('click',toggleNearby);
   $('#locateBtn').addEventListener('click',()=>{if(!navigator.geolocation){useDefaultLocation();return}navigator.geolocation.getCurrentPosition(p=>{var loc={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(loc);map.setView([loc.lat,loc.lng],14)},e=>{console.log('Locate failed, using fallback');useDefaultLocation();map.setView([currentEvent.lat,currentEvent.lng],15)},{enableHighAccuracy:false,timeout:8000,maximumAge:120000})});
@@ -271,6 +274,7 @@ function loadVendors(){fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).
 function addVendorMarker(v){if(!v.is_active)return;const icon=L.divIcon({className:'',html:'<div style="width:36px;height:36px;border-radius:50%;background:#f59e0b;border:2px solid #fbbf24;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 12px rgba(245,158,11,0.4)">🏪</div>',iconSize:[36,36],iconAnchor:[18,18]});const m=L.marker([v.lat,v.lng],{icon}).addTo(map).bindPopup('<b>'+esc(v.business_name)+'</b><br>'+esc(v.description)+(v.tags?.length?'<br><small>'+v.tags.map(t=>'#'+t).join(' ')+'</small>':''));m.on('click',()=>{$('#vpName').textContent=v.business_name;$('#vpDesc').textContent=v.description;$('#vpTags').innerHTML=(v.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('');show($('#vendorPopup'))});vendorMarkers[v.id]=m}
 function loadSpots(){fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
 function addSpotMarker(s){const isCar=s.spot_type==='car_spot';const icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});const m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>');m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST'}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+d.likes+'</small>')})});spotMarkers[s.id]=m}
+
 function setupLocation(){
   if(!navigator.geolocation){useDefaultLocation();return}
   function gp(p){var l={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(l);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...l,event_id:currentEvent.id})});locationWatchId=setInterval(function(){navigator.geolocation.getCurrentPosition(function(pp){updateMyMarker({lat:pp.coords.latitude,lng:pp.coords.longitude})},function(){},{enableHighAccuracy:false,timeout:15000,maximumAge:60000})},30000)}
@@ -278,16 +282,32 @@ function setupLocation(){
   tg(2)
 }
 function useDefaultLocation(){var l={lat:currentEvent.lat,lng:currentEvent.lng+0.001};updateMyMarker(l);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...l,event_id:currentEvent.id})})}
-;list.forEach(u=>{if(u.username===currentUser.username)return;const colors={admin:'#dc2626',organizer:'#f59e0b',vendor:'#22c55e',attendee:'#6366f1'};const c=colors[u.role]||'#6366f1';const icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:'+c+';border:2px solid #fff;box-shadow:0 0 6px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div></div>',iconSize:[14,14],iconAnchor:[7,7]});if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else if(u.lat&&u.lng){userMarkers[u.username]=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map)}})})}
+
+function setupPolling(){
+  pollingTimers.push(setInterval(pollUsers,5000));
+  pollingTimers.push(setInterval(pollVendors,10000));
+  pollingTimers.push(setInterval(pollSpots,10000));
+}
+
+function pollUsers(){
+  if(!currentEvent||!showingNearby)return;
+  fetch('/api/users/'+currentEvent.id).then(r=>r.json()).then(list=>{
+    list.forEach(u=>{if(u.username===currentUser.username)return;const colors={admin:'#dc2626',organizer:'#f59e0b',vendor:'#22c55e',attendee:'#6366f1'};const c=colors[u.role]||'#6366f1';const icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:'+c+';border:2px solid #fff;box-shadow:0 0 6px '+c+';position:relative"><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:#a1a1aa;white-space:nowrap">'+esc(u.username)+'</div></div>',iconSize:[14,14],iconAnchor:[7,7]});if(userMarkers[u.username]){userMarkers[u.username].setLatLng([u.lat,u.lng])}else if(u.lat&&u.lng){userMarkers[u.username]=L.marker([u.lat,u.lng],{icon,zIndexOffset:100}).addTo(map)}})
+  })
+}
+
 function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+currentEvent.id).then(r=>r.json()).then(list=>{const ids=new Set(list.filter(v=>v.is_active).map(v=>v.id));Object.keys(vendorMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(vendorMarkers[id]);delete vendorMarkers[id]}});list.filter(v=>v.is_active).forEach(v=>{if(vendorMarkers[v.id]){const m=vendorMarkers[v.id];if(m.getLatLng().lat!==v.lat||m.getLatLng().lng!==v.lng)m.setLatLng([v.lat,v.lng])}else addVendorMarker(v)})})}
 function pollSpots(){if(!currentEvent)return;fetch('/api/spots/'+currentEvent.id).then(r=>r.json()).then(list=>{const ids=new Set(list.map(s=>s.id));Object.keys(spotMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(spotMarkers[id]);delete spotMarkers[id]}});list.forEach(s=>{if(spotMarkers[s.id]){const m=spotMarkers[s.id];if(m.getLatLng().lat!==s.lat||m.getLatLng().lng!==s.lng)m.setLatLng([s.lat,s.lng])}else addSpotMarker(s)})})}
+
 function toggleNearby(){showingNearby=!showingNearby;$('#nearbyBtn').classList.toggle('active',showingNearby);if(!showingNearby){Object.entries(userMarkers).forEach(([k,m])=>{if(k!=='_me'){map.removeLayer(m);delete userMarkers[k]}})}else pollUsers()}
+
 function openSpotModal(){show($('#spotModal'));$('#spotLabel').value='';$('#spotDesc').value=''}
 function saveSpot(){const label=$('#spotLabel').value.trim();if(!label)return;const c=map.getCenter();fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,label,description:$('#spotDesc').value.trim(),lat:c.lat,lng:c.lng,spot_type:$('#spotType').value,username:currentUser?.username||'anon'})});hide($('#spotModal'))}
 function openVendorModal(){show($('#vendorModal'));$('#vendorName').value='';$('#vendorDesc').value='';$('#vendorLat').value='';$('#vendorLng').value=''}
 function saveVendor(){const name=$('#vendorName').value.trim();if(!name)return;const c=map.getCenter();fetch('/api/vendors',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:currentEvent.id,business_name:name,description:$('#vendorDesc').value.trim(),lat:parseFloat($('#vendorLat').value)||c.lat,lng:parseFloat($('#vendorLng').value)||c.lng,tags:[],user_id:currentUser?.username||'anon'})}).then(()=>pollVendors());hide($('#vendorModal'))}
 function openEventModal(ev){show($('#eventModal'));$('#eventTitle').textContent=ev?'Edit Event':'New Event';$('#evName').value=ev?ev.name:'';$('#evDesc').value=ev?ev.description:'';$('#evLoc').value=ev?ev.location_name:'';$('#evStart').value=ev?ev.start_date.slice(0,16):'';$('#evEnd').value=ev?ev.end_date.slice(0,16):'';$('#evLat').value=ev?ev.lat:'';$('#evLng').value=ev?ev.lng:'';$('#evCode').value=ev?ev.access_code:'';$('#evRadius').value=ev?ev.radius_meters:2000;$('#evParent').value=ev?ev.parent_event_id||'':'';$('#evActive').checked=ev?ev.is_active:true;$('#saveEventBtn').dataset.editId=ev?ev.id:''}
 function saveEvent(){const data={name:$('#evName').value.trim(),description:$('#evDesc').value.trim(),location_name:$('#evLoc').value.trim(),lat:parseFloat($('#evLat').value)||40.5144,lng:parseFloat($('#evLng').value)||-111.4764,radius_meters:parseInt($('#evRadius').value)||2000,access_code:$('#evCode').value.trim()||undefined,parent_event_id:$('#evParent').value.trim()||undefined,start_date:new Date($('#evStart').value||Date.now()).toISOString(),end_date:new Date($('#evEnd').value||Date.now()+86400000*3).toISOString(),is_active:$('#evActive').checked};if(!data.name)return;const eid=$('#saveEventBtn').dataset.editId;const m=eid?'PUT':'POST';const u=eid?'/api/events/'+eid:'/api/events';fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#eventModal'));loadDashboardEvents();loadAdminPanel()})}
+
 function loadAdminPanel(){fetch('/api/events').then(r=>r.json()).then(list=>{$('#adminEventCount').textContent=list.length;$('#eventList').innerHTML=list.map(e=>'<div class="event-item"><h3>'+esc(e.name)+(e.is_active?'':' <span style="color:#f87171;font-size:11px">(inactive)</span>')+'</h3><div class="meta">'+esc(e.location_name)+' · code: '+esc(e.access_code||'')+(e.child_count?' · '+e.child_count+' sub-events':'')+'</div><div class="actions"><button class="btn-outline btn-sm" onclick="openEventModalById(\''+e.id+'\')">Edit</button><button class="btn-danger btn-sm" onclick="deleteEventById(\''+e.id+'\')">Delete</button><button class="btn-outline btn-sm" onclick="switchToEvent(\''+e.id+'\')">View</button></div></div>').join('')||'<p style="padding:16px;color:#71717a">No events</p>'})}
 window.openEventModalById=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>openEventModal(e));
 window.deleteEventById=id=>{if(confirm('Delete?'))fetch('/api/events/'+id,{method:'DELETE'}).then(()=>{loadDashboardEvents();loadAdminPanel()})};
@@ -296,6 +316,7 @@ function toggleAdmin(){const p=$('#adminPanel');p.style.display=(p.style.display
 function loadDashboardEvents(){fetch('/api/events').then(r=>r.json()).then(list=>{$('#dashEventCount').textContent=list.length+' events';$('#dashEventList').innerHTML=list.map(e=>'<div class="event-item"><h3>'+esc(e.name)+(e.is_active?'':' <span style="color:#f87171;font-size:11px">(inactive)</span>')+'</h3><div class="meta">'+esc(e.location_name)+' · code: '+esc(e.access_code||'')+(e.child_count?' · '+e.child_count+' sub-events':'')+'</div><div class="actions"><button class="btn-outline btn-sm" onclick="openEventModalById(\''+e.id+'\')">Edit</button><button class="btn-danger btn-sm" onclick="deleteEventById(\''+e.id+'\')">Delete</button><button class="btn-outline btn-sm" onclick="switchToEventFromDash(\''+e.id+'\')">View Map</button></div></div>').join('')||'<p style="padding:16px;color:#71717a">No events</p>'})}
 function initDashboardControls(){$('#dashRole').textContent='Signed in as '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',logout);$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',openVendorModal)}
 window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#app'));initMap()});
+
 function logout(){
   if(currentUser){
     if(currentUser.role==='admin'){
