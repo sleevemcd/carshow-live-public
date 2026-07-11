@@ -444,8 +444,8 @@ function loadDummyUsers(){
   });
 }
 function openDummyUserModal(u){
-  var modal=$('#dummyUserModal');if(!modal){alert('Modal not found - please refresh');return;}
-  show(modal);$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
+  var modal=document.getElementById('dummyUserModal');if(!modal){document.body.innerHTML+='<div style=\"position:fixed;top:0;left:0;right:0;background:red;color:#fff;padding:20px;z-index:99999\">MODAL NOT FOUND! ID=dummyUserModal</div>';return;}
+  modal.style.display='block';$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
   $('#dummyUsername').value=u?u.username:'';$('#dummyUsername').disabled=!!u;
   $('#dummyDisplay').value=u&&u.display?u.display:'';$('#dummyRole').value=u?u.role:'attendee';
   $('#dummyBlurb').value=u&&u.blurb?u.blurb:'';
