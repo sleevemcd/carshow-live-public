@@ -208,6 +208,23 @@ input,textarea{outline:none}
 </div>
 </div>
 
+<div class="modal-overlay" id="dummyUserModal" style="display:none">
+<div class="modal">
+<h2 id="dummyUserTitle">Add User</h2>
+<label>Username</label><input type="text" id="dummyUsername" placeholder="e.g. bmwfanatic" />
+<label>Role</label><select id="dummyRole"><option value="attendee">Attendee</option><option value="user">User</option><option value="registered_user">Registered User</option><option value="vip">VIP</option><option value="super_user">Super User</option><option value="vendor">Vendor</option><option value="sponsor">Sponsor</option></select>
+<label>Info Blurb</label><input type="text" id="dummyBlurb" placeholder="Short description" />
+<label>Car</label><input type="text" id="dummyCar" placeholder="e.g. 2020 BMW M3" />
+<label>Instagram</label><input type="text" id="dummyInsta" placeholder="@username" />
+<label>Email</label><input type="email" id="dummyEmail" placeholder="user@example.com" />
+<label>Car Photo URL</label><input type="text" id="dummyPhoto" placeholder="https://..." />
+<label>Location</label>
+<div style="display:flex;gap:8px"><input type="number" id="dummyLat" step="any" placeholder="Lat" style="flex:1" /><input type="number" id="dummyLng" step="any" placeholder="Lng" style="flex:1" /><button class="btn-outline btn-sm" onclick="pickMapCenter()" style="white-space:nowrap">📍 Map</button></div>
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dummyLocationOn" checked /> Location sharing on</label>
+<div class="btn-row"><button id="cancelDummyUserBtn" class="btn-outline">Cancel</button><button id="saveDummyUserBtn" class="btn-primary">Save</button></div>
+</div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
@@ -419,13 +436,8 @@ function toggleAdmin(){var p=$('#adminPanel');p.style.display=(p.style.display==
 function initDashboardControls(){$('#dashRole').textContent='Signed in as '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',dashLogout);$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',openVendorModal);$('#dashNewUserBtn').addEventListener('click',function(){openDummyUserModal()});$('#saveDummyUserBtn').addEventListener('click',saveDummyUser);$('#cancelDummyUserBtn').addEventListener('click',()=>hide($('#dummyUserModal')));loadDummyUsers()}
 function loadDummyUsers(){
   fetch('/api/dummy-users').then(r=>r.json()).then(list=>{
-    $('#dummyUserList').innerHTML=list.map(u=>'<div class="dummy-row" data-username="'+u.username+'"><div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-size:13px;color:#d4d4d8">'+esc(u.username)+'</span><span style="font-size:11px;color:#71717a;margin-left:8px">'+esc(u.role)+'</span></div><div style="display:flex;gap:4px;align-items:center"><button class="dummy-edit-btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px" id="editbtn_'+u.username+'">Edit</button><button class="dummy-del-btn btn-danger btn-sm" style="font-size:10px;padding:2px 8px" id="delbtn_'+u.username+'">Del</button></div></div><div style="display:flex;gap:8px;margin-top:4px;font-size:11px;color:#52525b"><span>📍 '+u.lat+','+u.lng+'</span><span>'+(u.offering||'no offering')+'</span></div><div style="display:flex;gap:8px;margin-top:4px"><button class="dummy-loc-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';background:transparent;color:'+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';cursor:pointer" id="locbtn_'+u.username+'">📍 '+(u.locationEnabled!==false?'Sharing':'Off')+'</button><button class="dummy-offer-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.offering?'#f59e0b':'#52525b')+';background:transparent;color:'+(u.offering?'#f59e0b':'#52525b')+';cursor:pointer" id="offerbtn_'+u.username+'">🏷 '+(u.offering?'Active':'Off')+'</button></div></div>').join('')||'<p style="color:#52525b;text-align:center;padding:10px">No dummy users</p>';
-    list.forEach(u=>{
-      var eb=document.getElementById('editbtn_'+u.username);if(eb)eb.onclick=function(){editDummyUser2(u.username)};
-      var db=document.getElementById('delbtn_'+u.username);if(db)db.onclick=function(){deleteDummyUser(u.username)};
-      var lb=document.getElementById('locbtn_'+u.username);if(lb)lb.onclick=function(){toggleDummyField(u.username,'locationEnabled',u.locationEnabled===false)};
-      var ob=document.getElementById('offerbtn_'+u.username);if(ob)ob.onclick=function(){var uname=u.username;fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var fu=list.find(x=>x.username===uname);if(!fu)return;var curOffer=(fu.offering||'');var offs=['swag','giveaway','merch','poker','photo'];var labels={swag:'Swag',giveaway:'Giveaway',merch:'Merch',poker:'Poker',photo:'Photo'};function renderOffering(){return offs.map(o=>'<button id=\"offbtn_'+o+'\" style=\"margin:2px;padding:4px 10px;font-size:12px;border-radius:8px;border:1px solid '+(curOffer.includes(o)?'#22c55e':'#52525b')+';background:'+(curOffer.includes(o)?'rgba(34,197,94,0.15)':'transparent')+';color:'+(curOffer.includes(o)?'#22c55e':'#a1a1aa')+';cursor:pointer\">'+labels[o]+'</button>').join('')}var div=document.createElement('div');div.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#18181b;border:1px solid #27272a;border-radius:12px;padding:16px;z-index:9999;text-align:center';div.innerHTML='<p style=\"margin-bottom:10px;font-size:13px;color:#d4d4d8\">Offerings for '+esc(uname)+'</p><div id=\"offeringBtns\">'+renderOffering()+'</div><br><button style=\"margin-top:10px;padding:4px 12px;border-radius:6px;background:#4f46e5;color:#fff;border:none;cursor:pointer;font-size:12px\" onclick=\"this.parentElement.remove()\">Done</button>';document.body.appendChild(div);offs.forEach(o=>{var btn=document.getElementById('offbtn_'+o);if(btn)btn.onclick=function(){if(curOffer.includes(o)){curOffer=curOffer.split(',').filter(x=>x!==o).join(',')}else{curOffer=curOffer?curOffer+','+o:o}fetch('/api/dummy-users/'+uname,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:curOffer})}).then(()=>loadDummyUsers());var btns=document.getElementById('offeringBtns');if(btns)btns.innerHTML=renderOffering();offs.forEach(oo=>{var bb=document.getElementById('offbtn_'+oo);if(bb)bb.onclick=arguments.callee})}}})})}};
-    });
+    $('#dummyUserList').innerHTML=list.map(u=>'<div class="dummy-row" data-username="'+u.username+'"><div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-size:13px;color:#d4d4d8">'+esc(u.username)+'</span><span style="font-size:11px;color:#71717a;margin-left:8px">'+esc(u.role)+'</span></div><div style="display:flex;gap:4px;align-items:center"><button class="dummy-edit-btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px">Edit</button><button class="dummy-del-btn btn-danger btn-sm" style="font-size:10px;padding:2px 8px">Del</button></div></div><div style="display:flex;gap:8px;margin-top:4px;font-size:11px;color:#52525b"><span>📍 '+u.lat+','+u.lng+'</span><span>'+(u.offering||'no offering')+'</span></div><div style="display:flex;gap:8px;margin-top:4px"><button class="dummy-loc-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';background:transparent;color:'+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';cursor:pointer">📍 '+(u.locationEnabled!==false?'Sharing':'Off')+'</button><button class="dummy-offer-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.offering?'#f59e0b':'#52525b')+';background:transparent;color:'+(u.offering?'#f59e0b':'#52525b')+';cursor:pointer">🏷 '+(u.offering?'Active':'Off')+'</button></div></div>').join('')||'<p style="color:#52525b;text-align:center;padding:10px">No dummy users</p>';
+    document.querySelectorAll('.dummy-edit-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');var uname=row.dataset.username;fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===uname);if(u)openDummyUserModal(u)})}});
     document.querySelectorAll('.dummy-del-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');deleteDummyUser(row.dataset.username)}});
     document.querySelectorAll('.dummy-loc-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');var u=list.find(x=>x.username===row.dataset.username);if(u)toggleDummyField(u.username,'locationEnabled',u.locationEnabled===false)}});
     document.querySelectorAll('.dummy-offer-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');toggleDummyOffering(row.dataset.username)}});
@@ -453,7 +465,6 @@ function saveDummyUser(){
   fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#dummyUserModal'));loadDummyUsers()});
 }
 function pickMapCenter(){if(map){var c=map.getCenter();$('#dummyLat').value=c.lat.toFixed(6);$('#dummyLng').value=c.lng.toFixed(6)}}
-function editDummyUser2(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u)openDummyUserModal(u)})};
 window.editDummyUser=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u)openDummyUserModal(u)})};
 window.deleteDummyUser=function(username){if(confirm('Delete '+username+'?'))fetch('/api/dummy-users/'+username,{method:'DELETE'}).then(()=>loadDummyUsers())};
 window.toggleDummyField=function(username,field,val){fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:val})}).then(()=>loadDummyUsers())};
@@ -616,8 +627,6 @@ window.addEventListener('load',initLogin);
 <div id="dirList"></div>
 </div>
 </div>
-
-<div class="modal-overlay" id="dummyUserModal" style="display:none">
 <div class="modal">
 <h2 id="dummyUserTitle">Add User</h2>
 <label>Username</label><input type="text" id="dummyUsername" placeholder="e.g. bmwfanatic" />
@@ -640,7 +649,6 @@ window.addEventListener('load',initLogin);
 </div>
 <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dummyLocationOn" checked /> Location sharing on</label>
 <div class="btn-row"><button id="cancelDummyUserBtn" class="btn-outline">Cancel</button><button id="saveDummyUserBtn" class="btn-primary">Save</button></div>
-</div>
 </div>
 </div>
 
