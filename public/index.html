@@ -123,6 +123,7 @@ input,textarea{outline:none}
 <div id="notifToast" style="display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:50;background:#18181b;border:1px solid #27272a;border-radius:12px;padding:12px 16px;font-size:13px;color:#d4d4d8;max-width:300px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5)"><span id="notifToastMsg"></span><button id="notifToastClose" style="background:none;border:none;color:#71717a;margin-left:8px;cursor:pointer">✕</button></div>
 <div id="controls">
 <button id="locateBtn" title="Jump to my location">◎ My Location</button>
+<button id="pokerBtn">🃏 Poker</button>
 <div style="position:relative;margin-top:4px">
 <input type="text" id="mapSearch" placeholder="🔍 Search spots, vendors, cars..." style="width:180px;padding:7px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px" />
 <div id="mapSearchResults" style="display:none;position:absolute;top:100%;right:0;width:200px;max-height:150px;overflow-y:auto;background:#18181b;border:1px solid #27272a;border-radius:8px;margin-top:2px;z-index:20"></div>
@@ -313,7 +314,7 @@ function initControls(){
   $('#clearNotifsBtn').addEventListener('click',()=>{fetch('/api/notifications',{method:'DELETE'}).then(()=>loadNotifs())});
   $('#notifToastClose').addEventListener('click',()=>hide($('#notifToast')));
   pollingTimers.push(setInterval(pollNotifs,15000));
-  pollNotifs();
+  pollNotifs();$("#pokerBtn").addEventListener("click",openPoker);$("#closePokerBtn").addEventListener("click",function(){hide($("#pokerModal"))});$("#collectCardBtn").addEventListener("click",collectPokerCard);
   $('#eventScheduleBar').addEventListener('click',function(){var l=$('#eventScheduleList');var t=$('#eventScheduleToggle');if(l.style.display==='none'||!l.style.display){l.style.display='block';t.textContent='▼'}else{l.style.display='none';t.textContent='▲'}});
   loadMapSchedule();
   $('#mapSearch').addEventListener('input',function(){
@@ -608,6 +609,10 @@ window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
 window.addEventListener('load',initLogin);
 
+
+function openPoker(){show($("#pokerModal"));loadPokerHand()}
+function loadPokerHand(){fetch("/api/poker/hand/"+currentUser.username).then(function(r){return r.json()}).then(function(hand){var cards=hand.cards||[];var html="";for(var i=0;i<cards.length;i++){var c=cards[i];var color=(c.suit==="♥"||c.suit==="♦")?"#ef4444":"#d4d4d8";html+="<span style=\"font-size:20px;margin:0 4px;color:"+color+"\">"+c.rank+c.suit+"</span>"}$("#pokerHand").innerHTML=html||"Tap a vendor offering poker to collect cards";if(cards.length>=5||!myLocation){$("#collectCardBtn").hide()}else{var nearby="";var found=false;fetch("/api/dummy-users").then(function(r){return r.json()}).then(function(users){var vendors=users.filter(function(u){return u.offering&&u.offering.split(",").includes("poker")&&u.locationEnabled!==false});for(var i=0;i<vendors.length;i++){var v=vendors[i];if(!myLocation)continue;var d=Math.sqrt(Math.pow(v.lat-myLocation.lat,2)+Math.pow(v.lng-myLocation.lng,2));if(d<0.005){found=true;break}}$("#collectCardBtn").toggle(found).text(found?"Collect Card from "+(found&&vendors.length?"nearby vendor":"vendor"):"No poker vendors nearby");$("#pokerVendors").textContent=vendors.filter(function(u){if(!myLocation)return false;var d=Math.sqrt(Math.pow(u.lat-myLocation.lat,2)+Math.pow(u.lng-myLocation.lng,2));return d<0.005}).length+" poker vendors nearby"})}})}
+function collectPokerCard(){if(!myLocation||!currentUser)return;fetch("/api/dummy-users").then(function(r){return r.json()}).then(function(users){var vendors=users.filter(function(u){return u.offering&&u.offering.split(",").includes("poker")&&u.locationEnabled!==false});for(var i=0;i<vendors.length;i++){var v=vendors[i];var d=Math.sqrt(Math.pow(v.lat-myLocation.lat,2)+Math.pow(v.lng-myLocation.lng,2));if(d<0.003){fetch("/api/poker/collect",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:currentUser.username,vendor_username:v.username})}).then(function(r){return r.json()}).then(function(data){if(data.error){showError(data.error)}else{loadPokerHand()}});return}}showError("No poker vendors in range")})};
 </script>
 <div class="modal-overlay" id="directoryModal" style="display:none">
 <div class="modal" style="max-width:500px;max-height:80vh;overflow-y:auto">
@@ -640,6 +645,7 @@ window.addEventListener('load',initLogin);
 <div class="btn-row"><button id="cancelDummyUserBtn" class="btn-outline">Cancel</button><button id="saveDummyUserBtn" class="btn-primary">Save</button></div>
 </div>
 </div>
+<div class="modal-overlay" id="pokerModal" style="display:none"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>🃏 Your Hand</h2><button id="closePokerBtn" class="btn-outline btn-sm">✕</button></div><div id="pokerHand" style="text-align:center;margin-bottom:16px;font-size:24px">No cards yet</div><div id="pokerVendors" style="margin-bottom:12px;font-size:12px;color:#71717a"></div><button id="collectCardBtn" class="btn-primary btn-sm" style="display:none;width:100%">Collect Card</button></div></div>
 
 </body>
 </html>

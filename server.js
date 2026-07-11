@@ -111,6 +111,15 @@ const demoUsers = loadData('demoUsers', [
 ])
 const users = {};
 const notifications = loadData("notifications", []);
+
+// Poker run
+const pokerHands = loadData("pokerHands", {});
+var suits = ["♠","♥","♦","♣"];
+var ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+function randomCard(){ return { suit: suits[Math.floor(Math.random()*4)], rank: ranks[Math.floor(Math.random()*13)] }; }
+app.get("/api/poker/hand/:username", (req,res) => { var h=pokerHands[req.params.username]||{cards:[]}; res.json(h); });
+app.post("/api/poker/collect", (req,res) => { var {username,vendor_username}=req.body; if(!username||!vendor_username) return res.status(400).json({error:"required"}); var v=demoUsers.find(u=>u.username===vendor_username&&u.offering&&u.offering.split(",").includes("poker")); if(!v) return res.status(400).json({error:"Vendor not offering poker"}); if(!pokerHands[username]) pokerHands[username]={cards:[]}; if(pokerHands[username].cards.length>=5) return res.status(400).json({error:"Hand full (max 5)"}); var has=pokerHands[username].cards.filter(function(c){return c.from===vendor_username}); if(has.length) return res.status(400).json({error:"Already got card from this vendor"}); var card=randomCard(); card.from=vendor_username; card.collected_at=Date.now(); pokerHands[username].cards.push(card); saveData("pokerHands",pokerHands); res.json({card,hand:pokerHands[username].cards}); });
+app.get("/api/poker/leaderboard", (req,res) => { var board=Object.keys(pokerHands).map(function(un){return{username:un,cards:pokerHands[un].cards,count:pokerHands[un].cards.length}}).sort(function(a,b){return b.count-a.count}); res.json(board.slice(0,20)); });
 const follows = {}; // username -> [vendor_username]
 const USERS_EXPIRY_MS = 60 * 1000;
 const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/a06502732cdb2e4140be9ba71f0a71cb992e0db60e1a33daa75105c565ab797f%40group.calendar.google.com/public/basic.ics';
