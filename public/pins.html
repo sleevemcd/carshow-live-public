@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Pin Management</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#09090b;color:#f4f4f5;padding:20px}h1{font-size:20px;margin-bottom:16px}button{font-family:inherit;cursor:pointer;border:none}table{width:100%;border-collapse:collapse}th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #1f1f23;font-size:13px}th{color:#71717a;font-weight:600}td{color:#d4d4d8}.btn{padding:6px 12px;border-radius:8px;font-size:12px}.btn-primary{background:#4f46e5;color:#fff}.btn-outline{background:transparent;border:1px solid #27272a;color:#d4d4d8}.btn-danger{background:#dc2626;color:#fff;padding:4px 10px;font-size:11px}.btn-sm{font-size:11px;padding:4px 10px}.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}select,input{padding:6px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px}a{color:#a5b4fc}</style></head><body>
+<h1>📍 Pin Management</h1>
+<div class="toolbar">
+<button class="btn btn-outline btn-sm" onclick="history.back()">← Dashboard</button>
+<select id="filterType"><option value="">All Types</option><option value="spot">📍 Spot</option><option value="car_spot">🚗 Car Spot</option><option value="food">🍔 Food</option></select>
+<select id="filterEvent"><option value="">All Events</option></select>
+<input type="text" id="filterSearch" placeholder="Search by label or user..." />
+<span id="pinCount" style="font-size:12px;color:#71717a"></span>
+</div>
+<table><thead><tr><th>Type</th><th>Label</th><th>By</th><th>Location</th><th>Likes</th><th>Expires</th><th>Actions</th></tr></thead><tbody id="pinTable"></tbody></table>
+<script>
+function loadPins(){
+  fetch('/api/events').then(function(r){return r.json()}).then(function(evs){
+    var sel=document.getElementById('filterEvent');
+    sel.innerHTML='<option value="">All Events</option>'+evs.map(function(e){return'<option value="'+e.id+'">'+esc(e.name)+'</option>'}).join('');
+  });
+  var q=document.getElementById('filterSearch').value.toLowerCase();
+  var t=document.getElementById('filterType').value;
+  var eid=document.getElementById('filterEvent').value;
+  fetch('/api/events').then(function(r){return r.json()}).then(function(evs){
+    var allPins=[];
+    var promises=evs.map(function(e){
+      return fetch('/api/spots/'+e.id).then(function(r){return r.json()}).then(function(spots){
+        spots.forEach(function(s){s._event=e.name;allPins.push(s)});
+      });
+    });
+    Promise.all(promises).then(function(){
+      var filtered=allPins.filter(function(s){
+        if(t&&s.spot_type!==t)return false;
+        if(eid&&s.event_id!==eid)return false;
+        if(q&&!((s.label||'').toLowerCase().includes(q)||(s.username||'').toLowerCase().includes(q)))return false;
+        return true;
+      });
+      document.getElementById('pinCount').textContent=filtered.length+' pins';
+      var rows='';
+      for(var i=0;i<filtered.length;i++){
+        var s=filtered[i];
+        var typeEmoji=s.spot_type==='car_spot'?'🚗':s.spot_type==='food'?'🍔':'📍';
+        var exp=s.expires_at?new Date(s.expires_at).toLocaleString():'N/A';
+        rows+='<tr><td>'+typeEmoji+' '+s.spot_type+'</td><td>'+esc(s.label)+'</td><td>'+esc(s.username||'anon')+'</td><td>'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4)+'</td><td>❤️ '+(s.likes||0)+'</td><td style="font-size:11px;color:#71717a">'+exp+'</td><td><button class="btn-danger btn-sm" onclick="delPin(\''+s.id+'\')">Del</button></td></tr>';
+      }
+      document.getElementById('pinTable').innerHTML=rows||'<tr><td colspan="7" style="color:#71717a;text-align:center">No pins</td></tr>';
+    });
+  });
+}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function delPin(id){if(confirm('Delete this pin?')){fetch('/api/spots/'+id,{method:'DELETE'}).then(function(){loadPins()})}}
+document.getElementById('filterType').addEventListener('change',loadPins);
+document.getElementById('filterEvent').addEventListener('change',loadPins);
+document.getElementById('filterSearch').addEventListener('input',loadPins);
+window.addEventListener('load',loadPins);
+</script></body></html>
