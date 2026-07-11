@@ -39,7 +39,9 @@ const spots = [
 
 function saveAll(){ saveData('events',events);saveData('demoUsers',demoUsers);saveData('spots',spots);saveData('vendors',vendors);saveData('notifications',notifications); }
 app.use((req, res, next) => { res.on('finish', () => { if (['POST','PUT','DELETE'].includes(req.method)) saveAll(); }); next(); });
-app.get('/api/update', (req, res) => {
+app.get('/api/status', (req, res) => {
+  res.json({ dataDir: DATA_DIR, events: events.length, users: demoUsers.length, spots: spots.length, sample: demoUsers.slice(0, 2) });
+});
   const { exec } = require('child_process');
   exec('cd /app && git pull && npm install', (err, stdout) => {
     res.json({ ok: !err, output: stdout || (err ? err.message : 'updated') });
