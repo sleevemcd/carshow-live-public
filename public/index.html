@@ -210,7 +210,6 @@ input,textarea{outline:none}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<script src="/js/dummy.js"></script>
 <script>
 let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
@@ -427,18 +426,32 @@ function loadDummyUsers(){
     document.querySelectorAll('.dummy-offer-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');toggleDummyOffering(row.dataset.username)}});
   });
 }
-);
+function openDummyUserModal(u){
+  show($('#dummyUserModal'));$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
+  $('#dummyUsername').value=u?u.username:'';$('#dummyUsername').disabled=!!u;
+  $('#dummyDisplay').value=u&&u.display?u.display:'';$('#dummyRole').value=u?u.role:'attendee';
+  $('#dummyBlurb').value=u&&u.blurb?u.blurb:'';
+  $('#dummyCar').value=u&&u.car?u.car:'';
+  $('#dummyInsta').value=u&&u.instagram?u.instagram:'';
+  $('#dummyPhoto').value=u&&u.car_photo?u.car_photo:'';
+  $('#dummyEmail').value=u&&u.email?u.email:'';
+  $('#dummyLat').value=u?u.lat:40.5144;$('#dummyLng').value=u?u.lng:-111.4764;
+  $('#dummyLocationOn').checked=u?u.locationEnabled!==false:true;
+  document.querySelectorAll('.dummyOffer').forEach(cb=>{cb.checked=u&&u.offering?u.offering.split(',').includes(cb.value):false});
 }
-;
+function saveDummyUser(){
+  var username=$('#dummyUsername').value.trim();if(!username)return;
+  var offers=[];document.querySelectorAll('.dummyOffer:checked').forEach(cb=>offers.push(cb.value));
+  var data={username,display:$('#dummyDisplay').value.trim(),role:$('#dummyRole').value,blurb:$('#dummyBlurb').value.trim(),car:$('#dummyCar').value.trim(),instagram:$('#dummyInsta').value.trim(),car_photo:$('#dummyPhoto').value.trim(),email:$('#dummyEmail').value.trim(),lat:parseFloat($('#dummyLat').value)||40.5144,lng:parseFloat($('#dummyLng').value)||-111.4764,event_id:'demo-event-1',offering:offers.join(','),locationEnabled:$('#dummyLocationOn').checked};
   var isEdit=$('#dummyUsername').disabled;
   var m=isEdit?'PUT':'POST';var u=isEdit?'/api/dummy-users/'+username:'/api/dummy-users';
   fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#dummyUserModal'));loadDummyUsers()});
 }
 function pickMapCenter(){if(map){var c=map.getCenter();$('#dummyLat').value=c.lat.toFixed(6);$('#dummyLng').value=c.lng.toFixed(6)}}
-if(u)openDummyUserModal(u)})};
-
-
-if(u){var has=!!u.offering;var v=has?'':prompt('Offerings (comma-separated): swag,giveaway,merch,poker,photo',u.offering||'');if(v!==null)fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:v})}).then(()=>loadDummyUsers())}})};
+window.editDummyUser=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u)openDummyUserModal(u)})};
+window.deleteDummyUser=function(username){if(confirm('Delete '+username+'?'))fetch('/api/dummy-users/'+username,{method:'DELETE'}).then(()=>loadDummyUsers())};
+window.toggleDummyField=function(username,field,val){fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:val})}).then(()=>loadDummyUsers())};
+window.toggleDummyOffering=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u){var has=!!u.offering;var v=has?'':prompt('Offerings (comma-separated): swag,giveaway,merch,poker,photo',u.offering||'');if(v!==null)fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:v})}).then(()=>loadDummyUsers())}})};
 function goBack(){if(currentUser){if(currentUser.role==='admin'){hide($('#app'));show($('#eventHQ'));loadEventHQ();return}hide($('#app'));show($('#eventHQ'));loadEventHQ()}}
 function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));hide($('#eventHQ'));show($('#loginScreen'))}
 function loadEventHQ(){
@@ -589,9 +602,7 @@ window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
 window.addEventListener('load',initLogin);
 
-
-function switchToEventHQ(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#eventHQ'));loadEventHQ();initHQControls()})};
-function switchToEventMap(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#app'));initMap()})};</script>
+</script>
 <div class="modal-overlay" id="directoryModal" style="display:none">
 <div class="modal" style="max-width:500px;max-height:80vh;overflow-y:auto">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2>📋 Directory</h2><button id="closeDirBtn" class="btn-outline btn-sm">✕</button></div>
