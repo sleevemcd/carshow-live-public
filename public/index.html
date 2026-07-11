@@ -125,6 +125,7 @@ input,textarea{outline:none}
 <div id="controls">
 <button id="locateBtn" title="Jump to my location">◎ My Location</button>
 <button id="pokerBtn">🃏 Poker</button>
+<button id="dealBtn" style="display:none">🤝 Deal Cards</button>
 <div style="position:relative;margin-top:4px">
 <input type="text" id="mapSearch" placeholder="🔍 Search spots, vendors, cars..." style="width:180px;padding:7px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px" />
 <div id="mapSearchResults" style="display:none;position:absolute;top:100%;right:0;width:200px;max-height:150px;overflow-y:auto;background:#18181b;border:1px solid #27272a;border-radius:8px;margin-top:2px;z-index:20"></div>
@@ -212,6 +213,7 @@ input,textarea{outline:none}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="/js/deal.js"></script>
 <script>
 let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
@@ -291,6 +293,7 @@ function initControls(){
     $('#addVendorAdminBtn').addEventListener('click',openVendorModal);
     loadAdminPanel();
   }
+  if(role==='vendor'||role==='sponsor'){show($('#dealBtn'));$('#dealBtn').addEventListener('click',openDeal);$('#closeDealBtn').addEventListener('click',function(){hide($('#dealModal'))})}
   $('#shareBtn').addEventListener('click',openSpotModal);
   $('#locateBtn').addEventListener('click',()=>{
     if(!navigator.geolocation){useDefaultLocation();return}
@@ -640,6 +643,7 @@ function collectPokerCard(){if(!myLocation||!currentUser)return;fetch("/api/dumm
 <div id="dirList"></div>
 </div>
 </div>
+<div class="modal-overlay" id="dealModal" style="display:none"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>🤝 Deal Cards</h2><button id="closeDealBtn" class="btn-outline btn-sm">✕</button></div><div id="nearbyUsers" style="max-height:250px;overflow-y:auto"></div></div></div>
 <div class="modal">
 <h2 id="dummyUserTitle">Add User</h2>
 <label>Username</label><input type="text" id="dummyUsername" placeholder="e.g. bmwfanatic" />
