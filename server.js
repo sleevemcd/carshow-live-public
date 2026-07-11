@@ -152,6 +152,24 @@ app.get("/api/poker/leaderboard", (req,res) => {
   res.json(board.slice(0,20));
 });
 
+app.post("/api/poker/simulate", (req,res) => {
+  var { username } = req.body;
+  if (!username) return res.status(400).json({error:"username required"});
+  var pokerVendors = demoUsers.filter(u => u.offering && u.offering.split(',').includes('poker'));
+  if (!pokerVendors.length) return res.json({error:"No vendors offering poker. Enable poker offering on some vendors first."});
+  if (!pokerHands[username]) pokerHands[username] = { cards: [] };
+  var cards = [];
+  pokerVendors.forEach(function(v){
+    var already = pokerHands[username].cards.filter(function(c){return c.from===v.username});
+    if (!already.length && pokerHands[username].cards.length < 5) {
+      var card = randomCard(); card.from = v.username; card.collected_at = Date.now();
+      pokerHands[username].cards.push(card); cards.push(card);
+    }
+  });
+  saveData('pokerHands', pokerHands);
+  res.json({ cards: cards, hand: pokerHands[username].cards, totalCollected: cards.length });
+});
+
 app.post("/api/poker/reset", (req,res) => {
   Object.keys(pokerHands).forEach(function(k){delete pokerHands[k]});
   saveData('pokerHands',pokerHands);
