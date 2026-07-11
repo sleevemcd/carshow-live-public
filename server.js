@@ -151,6 +151,12 @@ app.get("/api/poker/leaderboard", (req,res) => {
   }).sort(function(a,b){return b.score-a.score});
   res.json(board.slice(0,20));
 });
+
+app.post("/api/poker/reset", (req,res) => {
+  Object.keys(pokerHands).forEach(function(k){delete pokerHands[k]});
+  saveData('pokerHands',pokerHands);
+  res.json({ok:true});
+});
 const follows = {}; // username -> [vendor_username]
 const USERS_EXPIRY_MS = 60 * 1000;
 const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/a06502732cdb2e4140be9ba71f0a71cb992e0db60e1a33daa75105c565ab797f%40group.calendar.google.com/public/basic.ics';
