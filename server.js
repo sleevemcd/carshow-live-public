@@ -105,12 +105,12 @@ const demoUsers = loadData('demoUsers', [
   { username: "jdmlover", role: "user", lat: 40.5155, lng: -111.4765, event_id: "demo-event-1" },
   { username: "stancebro", role: "attendee", lat: 40.5130, lng: -111.4775, event_id: "demo-event-1" },
   { username: "v8power", role: "registered_user", lat: 40.5148, lng: -111.4750, event_id: "demo-event-1" },
-  { username: "speedshop_ut", role: "sponsor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1" },
-  { username: "turbokings", role: "vendor", lat: 40.5135, lng: -111.4775, event_id: "demo-event-1" },
-  { username: "carbonwerks", role: "vendor", lat: 40.5150, lng: -111.4745, event_id: "demo-event-1" },
-  { username: "exotic_rentals", role: "sponsor", lat: 40.5142, lng: -111.4780, event_id: "demo-event-1" },
-  { username: "prestige_wheels", role: "vendor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1" },
-  { username: "detail_garage", role: "vendor", lat: 40.5138, lng: -111.4770, event_id: "demo-event-1" },
+  { username: "speedshop_ut", role: "sponsor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1", locationEnabled: false },
+  { username: "turbokings", role: "vendor", lat: 40.5135, lng: -111.4775, event_id: "demo-event-1", locationEnabled: false },
+  { username: "carbonwerks", role: "vendor", lat: 40.5150, lng: -111.4745, event_id: "demo-event-1", locationEnabled: false },
+  { username: "exotic_rentals", role: "sponsor", lat: 40.5142, lng: -111.4780, event_id: "demo-event-1", locationEnabled: false },
+  { username: "prestige_wheels", role: "vendor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1", locationEnabled: false },
+  { username: "detail_garage", role: "vendor", lat: 40.5138, lng: -111.4770, event_id: "demo-event-1", locationEnabled: false },
 ])
 const users = {};
 const notifications = loadData("notifications", []);
