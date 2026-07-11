@@ -108,6 +108,8 @@ const demoUsers = loadData('demoUsers', [
   { username: "turbokings", role: "vendor", lat: 40.5135, lng: -111.4775, event_id: "demo-event-1" },
   { username: "carbonwerks", role: "vendor", lat: 40.5150, lng: -111.4745, event_id: "demo-event-1" },
   { username: "exotic_rentals", role: "sponsor", lat: 40.5142, lng: -111.4780, event_id: "demo-event-1" },
+  { username: "prestige_wheels", role: "vendor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1" },
+  { username: "detail_garage", role: "vendor", lat: 40.5138, lng: -111.4770, event_id: "demo-event-1" },
 ])
 const users = {};
 const notifications = loadData("notifications", []);
