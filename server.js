@@ -100,11 +100,11 @@ app.post('/api/admin-login', (req, res) => {
 const HEAT_VALUES = { admin: 0, organizer: 0, sponsor: 3, vendor: 3, vip: 4, super_user: 10, registered_user: 2, user: 1, attendee: 1 };
 
 const demoUsers = loadData('demoUsers', [
-  { username: "bmwfanatic", role: "registered_user", lat: 40.5140, lng: -111.4760, event_id: "demo-event-1" },
-  { username: "porscheguy", role: "vip", lat: 40.5135, lng: -111.4755, event_id: "demo-event-1" },
-  { username: "jdmlover", role: "user", lat: 40.5155, lng: -111.4765, event_id: "demo-event-1" },
-  { username: "stancebro", role: "attendee", lat: 40.5130, lng: -111.4775, event_id: "demo-event-1" },
-  { username: "v8power", role: "registered_user", lat: 40.5148, lng: -111.4750, event_id: "demo-event-1" },
+  { username: "bmwfanatic", role: "registered_user", lat: 40.5140, lng: -111.4760, event_id: "demo-event-1", locationEnabled: false },
+  { username: "porscheguy", role: "vip", lat: 40.5135, lng: -111.4755, event_id: "demo-event-1", locationEnabled: false },
+  { username: "jdmlover", role: "user", lat: 40.5155, lng: -111.4765, event_id: "demo-event-1", locationEnabled: false },
+  { username: "stancebro", role: "attendee", lat: 40.5130, lng: -111.4775, event_id: "demo-event-1", locationEnabled: false },
+  { username: "v8power", role: "registered_user", lat: 40.5148, lng: -111.4750, event_id: "demo-event-1", locationEnabled: false },
   { username: "speedshop_ut", role: "sponsor", lat: 40.5152, lng: -111.4755, event_id: "demo-event-1", locationEnabled: false },
   { username: "turbokings", role: "vendor", lat: 40.5135, lng: -111.4775, event_id: "demo-event-1", locationEnabled: false },
   { username: "carbonwerks", role: "vendor", lat: 40.5150, lng: -111.4745, event_id: "demo-event-1", locationEnabled: false },
