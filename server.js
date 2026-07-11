@@ -46,8 +46,9 @@ const spots = loadData("spots", [
   { id: "spot-3", event_id: "demo-event-1", label: "Mountain View Photo Spot", description: "Epic Wasatch backdrop", lat: 40.5155, lng: -111.4780, spot_type: "spot", username: "photogear", likes: 8, expires_at: new Date(Date.now() + 86400000).toISOString() },
 ])
 
-function saveAll(){ saveData('events',events);saveData('demoUsers',demoUsers);saveData('spots',spots);saveData('vendors',vendors);saveData('notifications',notifications); }
+function saveAll(){ saveData('events',events);saveData('demoUsers',demoUsers);saveData('spots',spots);saveData('vendors',vendors);saveData('notifications',notifications);saveData('pokerHands',pokerHands); }
 app.use((req, res, next) => { res.on('finish', () => { if (['POST','PUT','DELETE'].includes(req.method)) saveAll(); }); next(); });
+setTimeout(saveAll,5000);
 app.get('/api/status', (req, res) => {
   res.json({ dataDir: DATA_DIR, events: events.length, users: demoUsers.length, spots: spots.length, sample: demoUsers.slice(0, 2) });
 });
