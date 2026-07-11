@@ -14,7 +14,16 @@ function saveData(name, obj) {
   try { fs.writeFileSync(path.join(DATA_DIR, name + '.json'), JSON.stringify(obj, null, 2)); } catch(e) {}
 }
 function loadData(name, fallback) {
-  try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, name + '.json'), 'utf8')); } catch(e) { return fallback; }
+  try {
+    var fp = path.join(DATA_DIR, name + '.json');
+    var raw = fs.readFileSync(fp, 'utf8');
+    var data = JSON.parse(raw);
+    console.log('Loaded '+name+': '+data.length+' items from '+fp);
+    return data;
+  } catch(e) {
+    console.log('Fallback for '+name+': '+e.message);
+    return fallback;
+  }
 }
 
 const events = loadData('events', [
