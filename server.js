@@ -42,6 +42,8 @@ app.use((req, res, next) => { res.on('finish', () => { if (['POST','PUT','DELETE
 app.get('/api/status', (req, res) => {
   res.json({ dataDir: DATA_DIR, events: events.length, users: demoUsers.length, spots: spots.length, sample: demoUsers.slice(0, 2) });
 });
+
+app.get('/api/update', (req, res) => {
   const { exec } = require('child_process');
   exec('cd /app && git pull && npm install', (err, stdout) => {
     res.json({ ok: !err, output: stdout || (err ? err.message : 'updated') });
