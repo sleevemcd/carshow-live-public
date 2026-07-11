@@ -576,18 +576,19 @@ window.toggleFollow=function(id,name,type){
 }
 function findCarHotspot(users,q){
   if(!users.length)return;
-  // Find density center: average of all matching user locations
-  var sumLat=0,sumLng=0;
-  users.forEach(u=>{sumLat+=u.lat;sumLng+=u.lng});
-  var center={lat:sumLat/users.length,lng:sumLng/users.length};
-  // Find closest density: grid-based approach
-  var best={lat:center.lat,lng:center.lng,count:0};
-  for(var i=0;i<20;i++){
-    var testLat=center.lat+(Math.random()-0.5)*0.01;
-    var testLng=center.lng+(Math.random()-0.5)*0.01;
-    var cnt=0;
-    users.forEach(u=>{var d=Math.sqrt(Math.pow(u.lat-testLat,2)+Math.pow(u.lng-testLng,2));if(d<0.005)cnt++});
-    if(cnt>best.count){best={lat:testLat,lng:testLng,count:cnt}}
+  var sumLat=0,sumLng=0,minLat=users[0].lat,maxLat=users[0].lat,minLng=users[0].lng,maxLng=users[0].lng;
+  users.forEach(u=>{sumLat+=u.lat;sumLng+=u.lng;if(u.lat<minLat)minLat=u.lat;if(u.lat>maxLat)maxLat=u.lat;if(u.lng<minLng)minLng=u.lng;if(u.lng>maxLng)maxLng=u.lng});
+  var best={lat:sumLat/users.length,lng:sumLng/users.length,count:0};
+  var gridSize=0.0005;
+  for(var la=minLat;la<=maxLat;la+=gridSize){
+    for(var lo=minLng;lo<=maxLng;lo+=gridSize){
+      var cnt=0;
+      for(var i=0;i<users.length;i++){
+        var d=Math.sqrt(Math.pow(users[i].lat-la,2)+Math.pow(users[i].lng-lo,2));
+        if(d<0.001)cnt++;
+      }
+      if(cnt>best.count){best={lat:la,lng:lo,count:cnt}}
+    }
   }
   map.setView([best.lat,best.lng],16);
   // Flash a circle
