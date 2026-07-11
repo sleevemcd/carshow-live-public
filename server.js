@@ -38,9 +38,9 @@ app.get('/api/sync', async (req, res) => {
 // Dummy user management API
 app.get('/api/dummy-users', (req, res) => { res.json(demoUsers); });
 app.post('/api/dummy-users', (req, res) => {
-  var { username, role, lat, lng, event_id, blurb, offering, locationEnabled } = req.body;
+  var { username, role, lat, lng, event_id, blurb, offering, locationEnabled, car, instagram, car_photo, email, display } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
-  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1', blurb: blurb || '', offering: offering || '', locationEnabled: locationEnabled !== false, car: car || '', instagram: instagram || '', car_photo: car_photo || '', email: email || '' });
+  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1', blurb: blurb || '', offering: offering || '', locationEnabled: locationEnabled !== false, car: car || '', instagram: instagram || '', car_photo: car_photo || '', email: email || '', display: display || '' });
   res.json(demoUsers);
 });
 app.put('/api/dummy-users/:username', (req, res) => {
