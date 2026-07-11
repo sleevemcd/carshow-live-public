@@ -71,6 +71,7 @@ input,textarea{outline:none}
 #adminPanel .new-btn{margin:12px 16px;width:calc(100% - 32px)}
 @media(max-width:600px){#shareBar{bottom:16px;padding:8px 12px;gap:6px}#shareBar button{font-size:12px;padding:6px 10px}#controls{top:70px;right:8px}#controls button{font-size:11px;padding:6px 10px}#adminPanel{width:100%}}
 </style>
+<script src="/js/dummy.js"></script>
 </head>
 <body>
 
@@ -205,23 +206,6 @@ input,textarea{outline:none}
 <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><input type="checkbox" id="evActive" checked /> Active</label>
 </div>
 <div class="btn-row"><button id="cancelEventBtn" class="btn-outline">Cancel</button><button id="saveEventBtn" class="btn-primary">Save</button></div>
-</div>
-</div>
-
-<div class="modal-overlay" id="dummyUserModal" style="display:none">
-<div class="modal">
-<h2 id="dummyUserTitle">Add User</h2>
-<label>Username</label><input type="text" id="dummyUsername" placeholder="e.g. bmwfanatic" />
-<label>Role</label><select id="dummyRole"><option value="attendee">Attendee</option><option value="user">User</option><option value="registered_user">Registered User</option><option value="vip">VIP</option><option value="super_user">Super User</option><option value="vendor">Vendor</option><option value="sponsor">Sponsor</option></select>
-<label>Info Blurb</label><input type="text" id="dummyBlurb" placeholder="Short description" />
-<label>Car</label><input type="text" id="dummyCar" placeholder="e.g. 2020 BMW M3" />
-<label>Instagram</label><input type="text" id="dummyInsta" placeholder="@username" />
-<label>Email</label><input type="email" id="dummyEmail" placeholder="user@example.com" />
-<label>Car Photo URL</label><input type="text" id="dummyPhoto" placeholder="https://..." />
-<label>Location</label>
-<div style="display:flex;gap:8px"><input type="number" id="dummyLat" step="any" placeholder="Lat" style="flex:1" /><input type="number" id="dummyLng" step="any" placeholder="Lng" style="flex:1" /><button class="btn-outline btn-sm" onclick="pickMapCenter()" style="white-space:nowrap">📍 Map</button></div>
-<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dummyLocationOn" checked /> Location sharing on</label>
-<div class="btn-row"><button id="cancelDummyUserBtn" class="btn-outline">Cancel</button><button id="saveDummyUserBtn" class="btn-primary">Save</button></div>
 </div>
 </div>
 
@@ -433,45 +417,8 @@ window.deleteEventById=id=>{if(confirm('Delete?'))fetch('/api/events/'+id,{metho
 window.switchToEvent=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;if(map)try{map.remove()}catch(ex){};map=null;initMap();hide($('#adminPanel'))});
 window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#app'));initMap()});
 function toggleAdmin(){var p=$('#adminPanel');p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';if(p.style.display==='block')loadAdminPanel()}
-function initDashboardControls(){$('#dashRole').textContent='Signed in as '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',dashLogout);$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',openVendorModal);$('#dashNewUserBtn').addEventListener('click',function(){openDummyUserModal()});$('#saveDummyUserBtn').addEventListener('click',saveDummyUser);$('#cancelDummyUserBtn').addEventListener('click',()=>hide($('#dummyUserModal')));loadDummyUsers()}
-function loadDummyUsers(){
-  fetch('/api/dummy-users').then(r=>r.json()).then(list=>{
-    $('#dummyUserList').innerHTML=list.map(u=>'<div class="dummy-row" data-username="'+u.username+'"><div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-size:13px;color:#d4d4d8">'+esc(u.username)+'</span><span style="font-size:11px;color:#71717a;margin-left:8px">'+esc(u.role)+'</span></div><div style="display:flex;gap:4px;align-items:center"><button class="dummy-edit-btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px">Edit</button><button class="dummy-del-btn btn-danger btn-sm" style="font-size:10px;padding:2px 8px">Del</button></div></div><div style="display:flex;gap:8px;margin-top:4px;font-size:11px;color:#52525b"><span>📍 '+u.lat+','+u.lng+'</span><span>'+(u.offering||'no offering')+'</span></div><div style="display:flex;gap:8px;margin-top:4px"><button class="dummy-loc-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';background:transparent;color:'+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';cursor:pointer">📍 '+(u.locationEnabled!==false?'Sharing':'Off')+'</button><button class="dummy-offer-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.offering?'#f59e0b':'#52525b')+';background:transparent;color:'+(u.offering?'#f59e0b':'#52525b')+';cursor:pointer">🏷 '+(u.offering?'Active':'Off')+'</button></div></div>').join('')||'<p style="color:#52525b;text-align:center;padding:10px">No dummy users</p>';
-    document.querySelectorAll('.dummy-edit-btn').forEach(b=>{b.onclick=function(){b.textContent='...';b.style.background='#4f46e5';setTimeout(function(){b.textContent='Edit';b.style.background='';openDummyUserModal()},500)}});
-    document.querySelectorAll('.dummy-del-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');deleteDummyUser(row.dataset.username)}});
-    document.querySelectorAll('.dummy-loc-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');var u=list.find(x=>x.username===row.dataset.username);if(u)toggleDummyField(u.username,'locationEnabled',u.locationEnabled===false)}});
-    document.querySelectorAll('.dummy-offer-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');toggleDummyOffering(row.dataset.username)}});
-  });
-}
-function openDummyUserModal(u){
-  var modal=document.getElementById('dummyUserModal');if(!modal){document.body.innerHTML+='<div style=\"position:fixed;top:0;left:0;right:0;background:red;color:#fff;padding:20px;z-index:99999\">MODAL NOT FOUND!</div>';return;}
-  modal.style.display='flex';$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
-  $('#dummyUsername').value=u?u.username:'';$('#dummyUsername').disabled=!!u;
-  $('#dummyDisplay').value=u&&u.display?u.display:'';$('#dummyRole').value=u?u.role:'attendee';
-  $('#dummyBlurb').value=u&&u.blurb?u.blurb:'';
-  $('#dummyCar').value=u&&u.car?u.car:'';
-  $('#dummyInsta').value=u&&u.instagram?u.instagram:'';
-  $('#dummyPhoto').value=u&&u.car_photo?u.car_photo:'';
-  $('#dummyEmail').value=u&&u.email?u.email:'';
-  $('#dummyLat').value=u?u.lat:40.5144;$('#dummyLng').value=u?u.lng:-111.4764;
-  $('#dummyLocationOn').checked=u?u.locationEnabled!==false:true;
-  document.querySelectorAll('.dummyOffer').forEach(cb=>{cb.checked=u&&u.offering?u.offering.split(',').includes(cb.value):false});
-}
-function saveDummyUser(){
-  var username=$('#dummyUsername').value.trim();if(!username)return;
-  var offers=[];document.querySelectorAll('.dummyOffer:checked').forEach(cb=>offers.push(cb.value));
-  var data={username,display:$('#dummyDisplay').value.trim(),role:$('#dummyRole').value,blurb:$('#dummyBlurb').value.trim(),car:$('#dummyCar').value.trim(),instagram:$('#dummyInsta').value.trim(),car_photo:$('#dummyPhoto').value.trim(),email:$('#dummyEmail').value.trim(),lat:parseFloat($('#dummyLat').value)||40.5144,lng:parseFloat($('#dummyLng').value)||-111.4764,event_id:'demo-event-1',offering:offers.join(','),locationEnabled:$('#dummyLocationOn').checked};
-  var isEdit=$('#dummyUsername').disabled;
-  var m=isEdit?'PUT':'POST';var u=isEdit?'/api/dummy-users/'+username:'/api/dummy-users';
-  fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#dummyUserModal'));loadDummyUsers()});
-}
-function pickMapCenter(){if(map){var c=map.getCenter();$('#dummyLat').value=c.lat.toFixed(6);$('#dummyLng').value=c.lng.toFixed(6)}}
-window.editDummyUser=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u)openDummyUserModal(u)})};
-window.deleteDummyUser=function(username){if(confirm('Delete '+username+'?'))fetch('/api/dummy-users/'+username,{method:'DELETE'}).then(()=>loadDummyUsers())};
-window.toggleDummyField=function(username,field,val){fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:val})}).then(()=>loadDummyUsers())};
-window.toggleDummyOffering=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u){var has=!!u.offering;var v=has?'':prompt('Offerings (comma-separated): swag,giveaway,merch,poker,photo',u.offering||'');if(v!==null)fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:v})}).then(()=>loadDummyUsers())}})};
-function goBack(){if(currentUser){if(currentUser.role==='admin'){hide($('#app'));show($('#eventHQ'));loadEventHQ();return}hide($('#app'));show($('#eventHQ'));loadEventHQ()}}
-function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));hide($('#eventHQ'));show($('#loginScreen'))}
+function initDashboardControls(){var dr=document.getElementById("dashRole");if(dr)dr.textContent="Signed in as "+currentUser.username;var dl=document.getElementById("dashLogoutBtn");if(dl)dl.addEventListener("click",dashLogout);var dn=document.getElementById("dashNewEventBtn");if(dn)dn.addEventListener("click",openEventModal);var da=document.getElementById("dashAddVendorBtn");if(da)da.addEventListener("click",openVendorModal);var du=document.getElementById("dashNewUserBtn");if(du)du.addEventListener("click",function(){if(typeof populateEditForm==="function")populateEditForm(null)});if(typeof loadDummyUsers==="function")loadDummyUsers()}
+
 function loadEventHQ(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
     var master=list.filter(e=>!e.parent_event_id&&e.is_active);
