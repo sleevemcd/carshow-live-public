@@ -1,51 +1,71 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Pin Management</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#09090b;color:#f4f4f5;padding:20px}h1{font-size:20px;margin-bottom:16px}button{font-family:inherit;cursor:pointer;border:none}table{width:100%;border-collapse:collapse}th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #1f1f23;font-size:13px}th{color:#71717a;font-weight:600}td{color:#d4d4d8}.btn{padding:6px 12px;border-radius:8px;font-size:12px}.btn-primary{background:#4f46e5;color:#fff}.btn-outline{background:transparent;border:1px solid #27272a;color:#d4d4d8}.btn-danger{background:#dc2626;color:#fff;padding:4px 10px;font-size:11px}.btn-sm{font-size:11px;padding:4px 10px}.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}select,input{padding:6px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px}a{color:#a5b4fc}</style></head><body>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#09090b;color:#f4f4f5;padding:20px}h1{font-size:20px;margin-bottom:16px}button{font-family:inherit;cursor:pointer;border:none}table{width:100%;border-collapse:collapse}th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #1f1f23;font-size:13px}th{color:#71717a;font-weight:600}td{color:#d4d4d8}.btn{padding:6px 12px;border-radius:8px;font-size:12px}.btn-primary{background:#4f46e5;color:#fff}.btn-outline{background:transparent;border:1px solid #27272a;color:#d4d4d8}.btn-danger{background:#dc2626;color:#fff;padding:4px 10px;font-size:11px}.btn-sm{font-size:11px;padding:4px 10px}.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:16px}.modal-overlay.open{display:flex}.modal{width:100%;max-width:440px;background:#18181b;border:1px solid #27272a;border-radius:16px;padding:20px;max-height:95vh;overflow-y:auto}.modal h2{font-size:16px;margin-bottom:12px}.modal label{display:block;font-size:12px;color:#71717a;margin-bottom:4px}.modal input,.modal select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #27272a;background:#09090b;color:#f4f4f5;font-size:14px;margin-bottom:10px}.modal .row{display:flex;gap:8px}.modal .row>*{flex:1}.modal .btns{display:flex;gap:8px;margin-top:12px}.modal .btns button{flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:600}select,input.text{padding:6px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px}a{color:#a5b4fc}</style></head><body>
 <h1>📍 Pin Management</h1>
-<div class="toolbar">
-<button class="btn btn-outline btn-sm" onclick="history.back()">← Dashboard</button>
-<select id="filterType"><option value="">All Types</option><option value="spot">📍 Spot</option><option value="car_spot">🚗 Car Spot</option><option value="food">🍔 Food</option></select>
-<select id="filterEvent"><option value="">All Events</option></select>
-<input type="text" id="filterSearch" placeholder="Search by label or user..." />
-<span id="pinCount" style="font-size:12px;color:#71717a"></span>
-</div>
+<div class="toolbar"><button class="btn btn-outline btn-sm" onclick="history.back()">← Dashboard</button><button class="btn btn-primary" onclick="openForm()">+ Add Pin</button><select id="filterType"><option value="">All Types</option><option value="spot">📍 Spot</option><option value="car_spot">🚗 Car Spot</option><option value="food">🍔 Food</option></select><select id="filterEvent"><option value="">All Events</option></select><input type="text" id="filterSearch" placeholder="Search by label or user..." class="text" /><span id="pinCount" style="font-size:12px;color:#71717a"></span></div>
 <table><thead><tr><th>Type</th><th>Label</th><th>By</th><th>Location</th><th>Likes</th><th>Expires</th><th>Actions</th></tr></thead><tbody id="pinTable"></tbody></table>
+<div class="modal-overlay" id="modal"><div class="modal">
+<h2 id="modalTitle">Add Pin</h2>
+<label>Type</label><select id="fType"><option value="spot">📍 Spot</option><option value="car_spot">🚗 Car Spot</option><option value="food">🍔 Food</option></select>
+<label>Label</label><input type="text" id="fLabel" placeholder="e.g. Best photo spot" />
+<label>Description</label><input type="text" id="fDesc" placeholder="Add some details..." />
+<label>Event</label><select id="fEvent"></select>
+<div class="row"><div><label>Lat</label><input type="number" id="fLat" step="any" value="40.5144" /></div><div><label>Lng</label><input type="number" id="fLng" step="any" value="-111.4764" /></div></div>
+<div style="margin-bottom:10px"><label>Click map to set location</label><div id="pickMap" style="width:100%;height:180px;border-radius:10px;border:1px solid #27272a"></div></div>
+<div class="btns"><button class="btn btn-outline" onclick="closeForm()">Cancel</button><button class="btn btn-primary" onclick="savePin()">Save Pin</button></div>
+</div></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+var pickMap,pickMarker;
+function initMapPicker(lat,lng){
+  var el=document.getElementById('pickMap');if(!el)return;
+  if(pickMap)pickMap.remove();
+  pickMap=L.map(el,{zoomControl:false,attributionControl:false}).setView([lat,lng],15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(pickMap);
+  pickMarker=L.marker([lat,lng],{draggable:true}).addTo(pickMap);
+  pickMarker.on('dragend',function(){var p=pickMarker.getLatLng();document.getElementById('fLat').value=p.lat.toFixed(6);document.getElementById('fLng').value=p.lng.toFixed(6)});
+  pickMap.on('click',function(e){pickMarker.setLatLng(e.latlng);document.getElementById('fLat').value=e.latlng.lat.toFixed(6);document.getElementById('fLng').value=e.latlng.lng.toFixed(6)});
+}
 function loadPins(){
   fetch('/api/events').then(function(r){return r.json()}).then(function(evs){
-    var sel=document.getElementById('filterEvent');
-    sel.innerHTML='<option value="">All Events</option>'+evs.map(function(e){return'<option value="'+e.id+'">'+esc(e.name)+'</option>'}).join('');
+    var sel=document.getElementById('filterEvent');var opts='<option value="">All Events</option>';
+    for(var i=0;i<evs.length;i++){opts+='<option value="'+evs[i].id+'">'+esc(evs[i].name)+'</option>'}
+    sel.innerHTML=opts;
+    var fEv=document.getElementById('fEvent');fEv.innerHTML=evs.map(function(e){return'<option value="'+e.id+'">'+esc(e.name)+'</option>'}).join('');
   });
   var q=document.getElementById('filterSearch').value.toLowerCase();
   var t=document.getElementById('filterType').value;
   var eid=document.getElementById('filterEvent').value;
   fetch('/api/events').then(function(r){return r.json()}).then(function(evs){
     var allPins=[];
-    var promises=evs.map(function(e){
-      return fetch('/api/spots/'+e.id).then(function(r){return r.json()}).then(function(spots){
+    var remaining=evs.length;
+    evs.forEach(function(e){
+      fetch('/api/spots/'+e.id).then(function(r){return r.json()}).then(function(spots){
         spots.forEach(function(s){s._event=e.name;allPins.push(s)});
+        remaining--;if(remaining===0)renderPins(allPins);
       });
     });
-    Promise.all(promises).then(function(){
-      var filtered=allPins.filter(function(s){
-        if(t&&s.spot_type!==t)return false;
-        if(eid&&s.event_id!==eid)return false;
-        if(q&&!((s.label||'').toLowerCase().includes(q)||(s.username||'').toLowerCase().includes(q)))return false;
-        return true;
-      });
+    function renderPins(all){
+      var filtered=all.filter(function(s){if(t&&s.spot_type!==t)return false;if(eid&&s.event_id!==eid)return false;if(q&&!((s.label||'').toLowerCase().indexOf(q)>=0||(s.username||'').toLowerCase().indexOf(q)>=0))return false;return true});
       document.getElementById('pinCount').textContent=filtered.length+' pins';
       var rows='';
       for(var i=0;i<filtered.length;i++){
-        var s=filtered[i];
-        var typeEmoji=s.spot_type==='car_spot'?'🚗':s.spot_type==='food'?'🍔':'📍';
-        var exp=s.expires_at?new Date(s.expires_at).toLocaleString():'N/A';
-        rows+='<tr><td>'+typeEmoji+' '+s.spot_type+'</td><td>'+esc(s.label)+'</td><td>'+esc(s.username||'anon')+'</td><td>'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4)+'</td><td>❤️ '+(s.likes||0)+'</td><td style="font-size:11px;color:#71717a">'+exp+'</td><td><button class="btn-danger btn-sm" onclick="delPin(\''+s.id+'\')">Del</button></td></tr>';
+        var s=filtered[i];var em=s.spot_type==='car_spot'?'🚗':s.spot_type==='food'?'🍔':'📍';
+        rows+='<tr><td>'+em+' '+s.spot_type+'</td><td>'+esc(s.label)+'</td><td>'+esc(s.username||'anon')+'</td><td>'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4)+'</td><td>❤️ '+(s.likes||0)+'</td><td style="font-size:11px;color:#71717a">'+new Date(s.expires_at).toLocaleString()+'</td><td><button class="btn-danger btn-sm" onclick="delPin(\''+s.id+'\')">Del</button></td></tr>';
       }
       document.getElementById('pinTable').innerHTML=rows||'<tr><td colspan="7" style="color:#71717a;text-align:center">No pins</td></tr>';
-    });
+    }
   });
 }
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function delPin(id){if(confirm('Delete this pin?')){fetch('/api/spots/'+id,{method:'DELETE'}).then(function(){loadPins()})}}
+function openForm(){document.getElementById('modalTitle').textContent='Add Pin';document.getElementById('fLabel').value='';document.getElementById('fDesc').value='';document.getElementById('fType').value='spot';document.getElementById('fLat').value=40.5144;document.getElementById('fLng').value=-111.4764;document.getElementById('modal').classList.add('open');initMapPicker(40.5144,-111.4764)}
+function closeForm(){document.getElementById('modal').classList.remove('open')}
+function savePin(){
+  var data={event_id:document.getElementById('fEvent').value||'demo-event-1',label:document.getElementById('fLabel').value.trim(),description:document.getElementById('fDesc').value.trim(),lat:parseFloat(document.getElementById('fLat').value)||40.5144,lng:parseFloat(document.getElementById('fLng').value)||-111.4764,spot_type:document.getElementById('fType').value,username:'admin'};
+  if(!data.label){alert('Label required');return}
+  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){if(!r.ok){alert('Server error: '+r.status);return}closeForm();loadPins()}).catch(function(e){alert('Fail: '+e.message)})
+}
+function delPin(id){if(confirm('Delete?')){fetch('/api/spots/'+id,{method:'DELETE'}).then(function(){loadPins()})}}
 document.getElementById('filterType').addEventListener('change',loadPins);
 document.getElementById('filterEvent').addEventListener('change',loadPins);
 document.getElementById('filterSearch').addEventListener('input',loadPins);
