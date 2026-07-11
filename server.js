@@ -343,6 +343,14 @@ app.post('/api/location/toggle', (req, res) => {
   const { username } = req.body;
   if (!username || !users[username]) return res.status(400).json({ error: 'User not found' });
   users[username].locationEnabled = !users[username].locationEnabled;
+  // Notify followers when someone turns location ON
+  if (users[username].locationEnabled) {
+    Object.keys(follows).forEach(follower => {
+      if (follows[follower].includes(username)) {
+        notifications.unshift({ key: 'loc-'+username+'-'+Date.now(), type: 'follow', message: username+' is now sharing their location!', created_at: new Date().toISOString() });
+      }
+    });
+  }
   res.json({ locationEnabled: users[username].locationEnabled });
 });
 
