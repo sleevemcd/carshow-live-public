@@ -368,8 +368,8 @@ function pollUsers(){
     var heatPoints=[];
     var ids=new Set(list.map(u=>u.username));
     Object.keys(userMarkers).forEach(k=>{if(k!=='_me'&&!ids.has(k)){map.removeLayer(userMarkers[k]);delete userMarkers[k]}});
-    var showRoles=['sponsor','vendor','vip'];
-    var rc={sponsor:'#f59e0b',vendor:'#22c55e',vip:'#ec4899'};
+    var showRoles=['sponsor','vendor','vip','super_user'];
+    var rc={sponsor:'#f59e0b',vendor:'#22c55e',vip:'#ec4899',super_user:'#a855f7'};
     list.forEach(u=>{
       if(u.username===currentUser.username)return;
       if(u.lat&&u.lng&&u.heat) heatPoints.push([u.lat,u.lng,u.heat]);

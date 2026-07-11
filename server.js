@@ -20,7 +20,11 @@ const vendors = [
   { id: "v5", user_id: "vendor5", event_id: "demo-event-1", business_name: "RaceFuel Energy", description: "Official energy drink of car culture.", tags: ["poker_chip","food"], is_active: false, lat: 40.5140, lng: -111.4740 }
 ];
 
-const spots = [];
+const spots = [
+  { id: "spot-1", event_id: "demo-event-1", label: "Best Tacos in Town", description: "Incredible al pastor", lat: 40.5145, lng: -111.4775, spot_type: "food", username: "foodie_cars", likes: 15, expires_at: new Date(Date.now() + 7*86400000).toISOString() },
+  { id: "spot-2", event_id: "demo-event-1", label: "Sick E46 M3", description: "Laguna Seca Blue, CSL intake", lat: 40.5138, lng: -111.4760, spot_type: "car_spot", username: "bmwfanatic", likes: 12, expires_at: new Date(Date.now() + 1800000).toISOString() },
+  { id: "spot-3", event_id: "demo-event-1", label: "Mountain View Photo Spot", description: "Epic Wasatch backdrop", lat: 40.5155, lng: -111.4780, spot_type: "spot", username: "photogear", likes: 8, expires_at: new Date(Date.now() + 86400000).toISOString() },
+];
 app.get('/api/update', (req, res) => {
   const { exec } = require('child_process');
   exec('cd /app && git pull && npm install', (err, stdout) => {
