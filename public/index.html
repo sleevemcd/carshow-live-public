@@ -437,14 +437,15 @@ function initDashboardControls(){$('#dashRole').textContent='Signed in as '+curr
 function loadDummyUsers(){
   fetch('/api/dummy-users').then(r=>r.json()).then(list=>{
     $('#dummyUserList').innerHTML=list.map(u=>'<div class="dummy-row" data-username="'+u.username+'"><div style="display:flex;justify-content:space-between;align-items:center"><div><span style="font-size:13px;color:#d4d4d8">'+esc(u.username)+'</span><span style="font-size:11px;color:#71717a;margin-left:8px">'+esc(u.role)+'</span></div><div style="display:flex;gap:4px;align-items:center"><button class="dummy-edit-btn btn-outline btn-sm" style="font-size:10px;padding:2px 8px">Edit</button><button class="dummy-del-btn btn-danger btn-sm" style="font-size:10px;padding:2px 8px">Del</button></div></div><div style="display:flex;gap:8px;margin-top:4px;font-size:11px;color:#52525b"><span>📍 '+u.lat+','+u.lng+'</span><span>'+(u.offering||'no offering')+'</span></div><div style="display:flex;gap:8px;margin-top:4px"><button class="dummy-loc-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';background:transparent;color:'+(u.locationEnabled!==false?'#22c55e':'#ef4444')+';cursor:pointer">📍 '+(u.locationEnabled!==false?'Sharing':'Off')+'</button><button class="dummy-offer-btn" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid '+(u.offering?'#f59e0b':'#52525b')+';background:transparent;color:'+(u.offering?'#f59e0b':'#52525b')+';cursor:pointer">🏷 '+(u.offering?'Active':'Off')+'</button></div></div>').join('')||'<p style="color:#52525b;text-align:center;padding:10px">No dummy users</p>';
-    document.querySelectorAll('.dummy-edit-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');var uname=row.dataset.username;fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===uname);if(u)openDummyUserModal(u)})}});
+    document.querySelectorAll('.dummy-edit-btn').forEach(b=>{b.onclick=function(){b.textContent='...';b.style.background='#4f46e5';var row=this.closest('.dummy-row');if(!row){alert('Row not found');return}var uname=row.dataset.username;if(!uname){alert('No username');return}fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===uname);if(u)openDummyUserModal(u);else alert('User not found: '+uname)}).catch(e=>{alert('Fetch error: '+e.message);b.textContent='Edit';b.style.background=''})}});
     document.querySelectorAll('.dummy-del-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');deleteDummyUser(row.dataset.username)}});
     document.querySelectorAll('.dummy-loc-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');var u=list.find(x=>x.username===row.dataset.username);if(u)toggleDummyField(u.username,'locationEnabled',u.locationEnabled===false)}});
     document.querySelectorAll('.dummy-offer-btn').forEach(b=>{b.onclick=function(){var row=this.closest('.dummy-row');toggleDummyOffering(row.dataset.username)}});
   });
 }
 function openDummyUserModal(u){
-  show($('#dummyUserModal'));$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
+  var modal=$('#dummyUserModal');if(!modal){alert('Modal not found - please refresh');return;}
+  show(modal);$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
   $('#dummyUsername').value=u?u.username:'';$('#dummyUsername').disabled=!!u;
   $('#dummyDisplay').value=u&&u.display?u.display:'';$('#dummyRole').value=u?u.role:'attendee';
   $('#dummyBlurb').value=u&&u.blurb?u.blurb:'';
