@@ -21,7 +21,7 @@ const events = loadData('events', [
   { id: "demo-event-1", name: "Wasatch Euro Fest 2026", description: "Utah's premier European car festival set against the stunning Wasatch Mountains. Exotics, classics, live music, food trucks, and a vendor village.", location_name: "Midway, Utah", lat: 40.5144, lng: -111.4764, radius_meters: 2000, start_date: "2026-07-10T00:00:00Z", end_date: "2026-07-12T00:00:00Z", access_code: "WEF2026", is_active: true, created_at: new Date().toISOString() },
   { id: "demo-event-2", name: "Morning Mountain Cruise", description: "Scenic drive through the Wasatch backroads.", location_name: "Alpine Loop, Utah", lat: 40.5210, lng: -111.4950, radius_meters: 800, start_date: "2026-07-11T06:00:00Z", end_date: "2026-07-11T12:00:00Z", access_code: "CRUISE", is_active: true, parent_event_id: "demo-event-1", created_at: new Date().toISOString() },
   { id: "demo-event-3", name: "Evening Car Meet & BBQ", description: "Casual evening meet with BBQ, music, and car talk.", location_name: "Midway, Utah", lat: 40.5125, lng: -111.4735, radius_meters: 600, start_date: "2026-07-11T17:00:00Z", end_date: "2026-07-11T23:00:00Z", access_code: "MEET", is_active: true, parent_event_id: "demo-event-1", created_at: new Date().toISOString() }
-];
+]);
 
 const vendors = [
   { id: "v1", user_id: "vendor1", event_id: "demo-event-1", business_name: "Prestige Wheels", description: "Custom forged wheels — on-site fitment.", tags: ["swag","merch"], is_active: true, lat: 40.5152, lng: -111.4755 },
@@ -357,7 +357,7 @@ app.get('/api/users/:eventId', (req, res) => {
     .map(u => {
       var v = u.role === 'vendor' ? vendors.find(vd => vd.user_id === u.username || vd.business_name && u.username && vd.business_name.toLowerCase().includes(u.username.toLowerCase())) : null;
       return { username: u.username, lat: u.lat, lng: u.lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', car: u.car || '', instagram: u.instagram || '', car_photo: u.car_photo || '', email: u.email || '', photo: u.photo || '', business_name: v ? v.business_name : '', description: v ? v.description : '', locationEnabled: u.locationEnabled !== false };
-    }));
+    });
   res.json([...real, ...demo]);
 });
 
