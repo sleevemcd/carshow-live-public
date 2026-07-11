@@ -32,19 +32,19 @@ const events = loadData('events', [
   { id: "demo-event-3", name: "Evening Car Meet & BBQ", description: "Casual evening meet with BBQ, music, and car talk.", location_name: "Midway, Utah", lat: 40.5125, lng: -111.4735, radius_meters: 600, start_date: "2026-07-11T17:00:00Z", end_date: "2026-07-11T23:00:00Z", access_code: "MEET", is_active: true, parent_event_id: "demo-event-1", created_at: new Date().toISOString() }
 ]);
 
-const vendors = [
+const vendors = loadData("vendors", [
   { id: "v1", user_id: "vendor1", event_id: "demo-event-1", business_name: "Prestige Wheels", description: "Custom forged wheels — on-site fitment.", tags: ["swag","merch"], is_active: true, lat: 40.5152, lng: -111.4755 },
   { id: "v2", user_id: "vendor2", event_id: "demo-event-1", business_name: "TurboKings Tuning", description: "ECU remapping, dyno runs, performance parts.", tags: ["poker_chip","giveaway"], is_active: true, lat: 40.5135, lng: -111.4775 },
   { id: "v3", user_id: "vendor3", event_id: "demo-event-1", business_name: "CarbonWerks", description: "Premium carbon fiber body kits and spoilers.", tags: ["swag","merch"], is_active: true, lat: 40.5150, lng: -111.4745 },
   { id: "v4", user_id: "vendor4", event_id: "demo-event-1", business_name: "Detail Garage", description: "Ceramic coatings, PPF, detailing demos.", tags: ["swag"], is_active: true, lat: 40.5138, lng: -111.4770 },
   { id: "v5", user_id: "vendor5", event_id: "demo-event-1", business_name: "RaceFuel Energy", description: "Official energy drink of car culture.", tags: ["poker_chip","food"], is_active: false, lat: 40.5140, lng: -111.4740 }
-];
+])
 
-const spots = [
+const spots = loadData("spots", [
   { id: "spot-1", event_id: "demo-event-1", label: "Best Tacos in Town", description: "Incredible al pastor", lat: 40.5145, lng: -111.4775, spot_type: "food", username: "foodie_cars", likes: 15, expires_at: new Date(Date.now() + 7*86400000).toISOString() },
   { id: "spot-2", event_id: "demo-event-1", label: "Sick E46 M3", description: "Laguna Seca Blue, CSL intake", lat: 40.5138, lng: -111.4760, spot_type: "car_spot", username: "bmwfanatic", likes: 12, expires_at: new Date(Date.now() + 1800000).toISOString() },
   { id: "spot-3", event_id: "demo-event-1", label: "Mountain View Photo Spot", description: "Epic Wasatch backdrop", lat: 40.5155, lng: -111.4780, spot_type: "spot", username: "photogear", likes: 8, expires_at: new Date(Date.now() + 86400000).toISOString() },
-];
+])
 
 function saveAll(){ saveData('events',events);saveData('demoUsers',demoUsers);saveData('spots',spots);saveData('vendors',vendors);saveData('notifications',notifications); }
 app.use((req, res, next) => { res.on('finish', () => { if (['POST','PUT','DELETE'].includes(req.method)) saveAll(); }); next(); });
@@ -98,7 +98,7 @@ app.post('/api/admin-login', (req, res) => {
 
 const HEAT_VALUES = { admin: 0, organizer: 0, sponsor: 3, vendor: 3, vip: 4, super_user: 10, registered_user: 2, user: 1, attendee: 1 };
 
-const demoUsers = [
+const demoUsers = loadData('demoUsers', [
   { username: "bmwfanatic", role: "registered_user", lat: 40.5140, lng: -111.4760, event_id: "demo-event-1" },
   { username: "porscheguy", role: "vip", lat: 40.5135, lng: -111.4755, event_id: "demo-event-1" },
   { username: "jdmlover", role: "user", lat: 40.5155, lng: -111.4765, event_id: "demo-event-1" },
@@ -108,9 +108,9 @@ const demoUsers = [
   { username: "turbokings", role: "vendor", lat: 40.5135, lng: -111.4775, event_id: "demo-event-1" },
   { username: "carbonwerks", role: "vendor", lat: 40.5150, lng: -111.4745, event_id: "demo-event-1" },
   { username: "exotic_rentals", role: "sponsor", lat: 40.5142, lng: -111.4780, event_id: "demo-event-1" },
-];
+])
 const users = {};
-const notifications = [];
+const notifications = loadData("notifications", []);
 const follows = {}; // username -> [vendor_username]
 const USERS_EXPIRY_MS = 60 * 1000;
 const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/a06502732cdb2e4140be9ba71f0a71cb992e0db60e1a33daa75105c565ab797f%40group.calendar.google.com/public/basic.ics';
