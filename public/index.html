@@ -391,7 +391,7 @@ function pollUsers(){
 }
 
 function getInitials(name){var parts=(name||'').split(/[ _-]/);if(parts.length>=2)return (parts[0][0]+parts[1][0]).toUpperCase();return (name||'?').substring(0,2).toUpperCase()}
-function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+getEventId()).then(r=>r.json()).then(list=>{var ids=new Set(list.filter(v=>v.is_active).map(v=>v.id));Object.keys(vendorMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(vendorMarkers[id]);delete vendorMarkers[id]}});list.filter(v=>v.is_active).forEach(v=>{if(vendorMarkers[v.id]){var m=vendorMarkers[v.id];if(m.getLatLng().lat!==v.lat||m.getLatLng().lng!==v.lng)m.setLatLng([v.lat,v.lng])}else addVendorMarker(v)})})}
+function pollVendors(){if(!currentEvent)return;fetch('/api/vendors/'+getEventId()).then(r=>r.json()).then(list=>{/* vendor markers managed by pollUsers */})}
 function pollSpots(){if(!currentEvent)return;fetch('/api/spots/'+getEventId()).then(r=>r.json()).then(list=>{var ids=new Set(list.map(s=>s.id));Object.keys(spotMarkers).forEach(id=>{if(!ids.has(id)){map.removeLayer(spotMarkers[id]);delete spotMarkers[id]}});list.forEach(s=>{if(spotMarkers[s.id]){var m=spotMarkers[s.id];if(m.getLatLng().lat!==s.lat||m.getLatLng().lng!==s.lng)m.setLatLng([s.lat,s.lng])}else addSpotMarker(s)})})}
 
 function openSpotModal(){
