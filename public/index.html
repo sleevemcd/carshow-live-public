@@ -291,6 +291,7 @@ function initControls(){
   });
   $('#locationToggle').addEventListener('change',()=>{
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
+    if($('#locationToggle').checked){if(!locationWatchId)setupLocation()}else{if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(userMarkers._me){map.removeLayer(userMarkers._me);delete userMarkers._me}myLocation=null}
   });
   $('#closeVendorPopup').addEventListener('click',()=>hide($('#vendorPopup')));
   $('#vpFollowBtn').addEventListener('click',function(){
@@ -355,8 +356,10 @@ function updateMyMarker(loc){
 }
 
 function setupLocation(){
-  if(!navigator.geolocation){useDefaultLocation();return}
-  function gp(p){myLocation={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(myLocation);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...myLocation,event_id:getEventId()})});locationWatchId=setInterval(function(){navigator.geolocation.getCurrentPosition(function(pp){myLocation={lat:pp.coords.latitude,lng:pp.coords.longitude};updateMyMarker(myLocation)},function(){},{enableHighAccuracy:false,timeout:15000,maximumAge:60000})},30000)}
+  if(!navigator.geolocation)return;
+  // Only track if user explicitly enabled location sharing
+  if(!$('#locationToggle').checked)return;
+  function gp(p){myLocation={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(myLocation);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...myLocation,event_id:currentEvent.id})});locationWatchId=setInterval(function(){navigator.geolocation.getCurrentPosition(function(pp){myLocation={lat:pp.coords.latitude,lng:pp.coords.longitude};updateMyMarker(myLocation)},function(){},{enableHighAccuracy:false,timeout:15000,maximumAge:60000})},30000)}
   function tg(n){navigator.geolocation.getCurrentPosition(gp,function(){if(n>0)setTimeout(function(){tg(n-1)},5000);else useDefaultLocation()},{enableHighAccuracy:false,timeout:20000,maximumAge:0})}
   tg(2)
 }
