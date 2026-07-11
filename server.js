@@ -1,12 +1,23 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-const events = [
+const DATA_DIR = path.join(__dirname, 'data');
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
+
+function saveData(name, obj) {
+  try { fs.writeFileSync(path.join(DATA_DIR, name + '.json'), JSON.stringify(obj, null, 2)); } catch(e) {}
+}
+function loadData(name, fallback) {
+  try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, name + '.json'), 'utf8')); } catch(e) { return fallback; }
+}
+
+const events = loadData('events', [
   { id: "demo-event-1", name: "Wasatch Euro Fest 2026", description: "Utah's premier European car festival set against the stunning Wasatch Mountains. Exotics, classics, live music, food trucks, and a vendor village.", location_name: "Midway, Utah", lat: 40.5144, lng: -111.4764, radius_meters: 2000, start_date: "2026-07-10T00:00:00Z", end_date: "2026-07-12T00:00:00Z", access_code: "WEF2026", is_active: true, created_at: new Date().toISOString() },
   { id: "demo-event-2", name: "Morning Mountain Cruise", description: "Scenic drive through the Wasatch backroads.", location_name: "Alpine Loop, Utah", lat: 40.5210, lng: -111.4950, radius_meters: 800, start_date: "2026-07-11T06:00:00Z", end_date: "2026-07-11T12:00:00Z", access_code: "CRUISE", is_active: true, parent_event_id: "demo-event-1", created_at: new Date().toISOString() },
   { id: "demo-event-3", name: "Evening Car Meet & BBQ", description: "Casual evening meet with BBQ, music, and car talk.", location_name: "Midway, Utah", lat: 40.5125, lng: -111.4735, radius_meters: 600, start_date: "2026-07-11T17:00:00Z", end_date: "2026-07-11T23:00:00Z", access_code: "MEET", is_active: true, parent_event_id: "demo-event-1", created_at: new Date().toISOString() }
@@ -25,6 +36,9 @@ const spots = [
   { id: "spot-2", event_id: "demo-event-1", label: "Sick E46 M3", description: "Laguna Seca Blue, CSL intake", lat: 40.5138, lng: -111.4760, spot_type: "car_spot", username: "bmwfanatic", likes: 12, expires_at: new Date(Date.now() + 1800000).toISOString() },
   { id: "spot-3", event_id: "demo-event-1", label: "Mountain View Photo Spot", description: "Epic Wasatch backdrop", lat: 40.5155, lng: -111.4780, spot_type: "spot", username: "photogear", likes: 8, expires_at: new Date(Date.now() + 86400000).toISOString() },
 ];
+
+// Auto-save every 30s
+setInterval(function(){ saveData("events",events);saveData("demoUsers",demoUsers);saveData("spots",spots);saveData("vendors",vendors);saveData("notifications",notifications); },30000);
 app.get('/api/update', (req, res) => {
   const { exec } = require('child_process');
   exec('cd /app && git pull && npm install', (err, stdout) => {
