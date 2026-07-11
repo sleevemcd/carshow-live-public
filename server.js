@@ -122,7 +122,35 @@ var ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
 function randomCard(){ return { suit: suits[Math.floor(Math.random()*4)], rank: ranks[Math.floor(Math.random()*13)] }; }
 app.get("/api/poker/hand/:username", (req,res) => { var h=pokerHands[req.params.username]||{cards:[]}; res.json(h); });
 app.post("/api/poker/collect", (req,res) => { var {username,vendor_username}=req.body; if(!username||!vendor_username) return res.status(400).json({error:"required"}); var v=demoUsers.find(u=>u.username===vendor_username&&u.offering&&u.offering.split(",").includes("poker")); if(!v) return res.status(400).json({error:"Vendor not offering poker"}); if(!pokerHands[username]) pokerHands[username]={cards:[]}; if(pokerHands[username].cards.length>=5) return res.status(400).json({error:"Hand full (max 5)"}); var has=pokerHands[username].cards.filter(function(c){return c.from===vendor_username}); if(has.length) return res.status(400).json({error:"Already got card from this vendor"}); var card=randomCard(); card.from=vendor_username; card.collected_at=Date.now(); pokerHands[username].cards.push(card); saveData("pokerHands",pokerHands); res.json({card,hand:pokerHands[username].cards}); });
-app.get("/api/poker/leaderboard", (req,res) => { var board=Object.keys(pokerHands).map(function(un){return{username:un,cards:pokerHands[un].cards,count:pokerHands[un].cards.length}}).sort(function(a,b){return b.count-a.count}); res.json(board.slice(0,20)); });
+app.get("/api/poker/leaderboard", (req,res) => {
+  var rankOrder = {"2":1,"3":2,"4":3,"5":4,"6":5,"7":6,"8":7,"9":8,"10":9,"J":10,"Q":11,"K":12,"A":13};
+  function evalHand(cards){
+    if(!cards||cards.length<5) return {score:cards?cards.length:0,label:cards?cards.length+' cards':'No cards',cards:cards||[]};
+    var ranks=cards.map(function(c){return rankOrder[c.rank]}).sort(function(a,b){return b-a});
+    var suits=cards.map(function(c){return c.suit});
+    var isFlush=suits.every(function(s){return s===suits[0]});
+    var isStraight=false; var rs=[...new Set(ranks)].sort(function(a,b){return b-a});
+    if(rs.length===5&&rs[0]-rs[4]===4)isStraight=true;
+    if(rs.join(',')==='13,12,11,10,1')isStraight=true;
+    var counts={};ranks.forEach(function(r){counts[r]=(counts[r]||0)+1});
+    var groups=Object.values(counts).sort(function(a,b){return b-a});
+    if(isFlush&&isStraight&&ranks[0]===13)return{score:900,label:'Royal Flush',cards:cards};
+    if(isFlush&&isStraight)return{score:800+ranks[0],label:'Straight Flush',cards:cards};
+    if(groups[0]===4)return{score:700+Object.keys(counts).find(function(k){return counts[k]===4})*1,label:'Four of a Kind',cards:cards};
+    if(groups[0]===3&&groups[1]===2)return{score:600,label:'Full House',cards:cards};
+    if(isFlush)return{score:500+ranks[0],label:'Flush',cards:cards};
+    if(isStraight)return{score:400+ranks[0],label:'Straight',cards:cards};
+    if(groups[0]===3)return{score:300,label:'Three of a Kind',cards:cards};
+    if(groups[0]===2&&groups[1]===2)return{score:200,label:'Two Pair',cards:cards};
+    if(groups[0]===2)return{score:100,label:'One Pair',cards:cards};
+    return{score:ranks[0],label:'High Card',cards:cards};
+  }
+  var board=Object.keys(pokerHands).map(function(un){
+    var hand=evalHand(pokerHands[un].cards);
+    return{username:un,label:hand.label,cards:pokerHands[un].cards,score:hand.score};
+  }).sort(function(a,b){return b.score-a.score});
+  res.json(board.slice(0,20));
+});
 const follows = {}; // username -> [vendor_username]
 const USERS_EXPIRY_MS = 60 * 1000;
 const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/a06502732cdb2e4140be9ba71f0a71cb992e0db60e1a33daa75105c565ab797f%40group.calendar.google.com/public/basic.ics';
