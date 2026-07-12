@@ -308,7 +308,7 @@ function initControls(){
     navigator.geolocation.getCurrentPosition(p=>{
       var loc={lat:p.coords.latitude,lng:p.coords.longitude};
       myLocation=loc;updateMyMarker(loc);map.setView([loc.lat,loc.lng],15);
-    },()=>{useDefaultLocation();map.setView([currentEvent.lat,currentEvent.lng],15)},{enableHighAccuracy:false,timeout:8000,maximumAge:120000})
+    },()=>{useDefaultLocation();map.setView([currentEvent.lat,currentEvent.lng],15)},{enableHighAccuracy:true,timeout:8000,maximumAge:120000})
   });
   $('#locationToggle').addEventListener('change',()=>{
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
@@ -381,8 +381,8 @@ function setupLocation(){
   if(!navigator.geolocation)return;
   // Only track if user explicitly enabled location sharing
   if(!$('#locationToggle').checked)return;
-  function gp(p){myLocation={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(myLocation);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...myLocation,event_id:currentEvent.id})});locationWatchId=setInterval(function(){navigator.geolocation.getCurrentPosition(function(pp){myLocation={lat:pp.coords.latitude,lng:pp.coords.longitude};updateMyMarker(myLocation)},function(){},{enableHighAccuracy:false,timeout:15000,maximumAge:60000})},30000)}
-  function tg(n){navigator.geolocation.getCurrentPosition(gp,function(){if(n>0)setTimeout(function(){tg(n-1)},5000);else useDefaultLocation()},{enableHighAccuracy:false,timeout:20000,maximumAge:0})}
+  function gp(p){myLocation={lat:p.coords.latitude,lng:p.coords.longitude};updateMyMarker(myLocation);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...myLocation,event_id:currentEvent.id})});locationWatchId=setInterval(function(){navigator.geolocation.getCurrentPosition(function(pp){myLocation={lat:pp.coords.latitude,lng:pp.coords.longitude};updateMyMarker(myLocation)},function(){},{enableHighAccuracy:true,timeout:15000,maximumAge:60000})},30000)}
+  function tg(n){navigator.geolocation.getCurrentPosition(gp,function(){if(n>0)setTimeout(function(){tg(n-1)},5000);else useDefaultLocation()},{enableHighAccuracy:true,timeout:20000,maximumAge:0})}
   tg(2)
 }
 function useDefaultLocation(){var l={lat:currentEvent.lat,lng:currentEvent.lng+0.001};myLocation=l;updateMyMarker(l);fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,...l,event_id:getEventId()})})}
@@ -526,7 +526,7 @@ function initHQControls(){
   $('#hqLocationToggle').addEventListener('change',function(){
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,enabled:this.checked})});
     this.parentElement.querySelector('span').textContent=this.checked?'On':'Off';
-    if(this.checked&&navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentEvent.id})})},function(){},{enableHighAccuracy:false,timeout:5000})}
+    if(this.checked&&navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentEvent.id})})},function(){},{enableHighAccuracy:true,timeout:5000})}
   });
   $('#hqDirBtn').addEventListener('click',()=>{show($('#directoryModal'));loadDirectory()});
   $('#closeDirBtn').addEventListener('click',()=>hide($('#directoryModal')));

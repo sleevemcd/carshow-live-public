@@ -55,7 +55,7 @@ function toggleVendorLoc(){
     if(newVal && navigator.geolocation){
       navigator.geolocation.getCurrentPosition(function(p){
         fetch("/api/location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:un,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentUser.event_id||"demo-event-1"})});
-      },function(){},{enableHighAccuracy:false,timeout:5000});
+      },function(){},{enableHighAccuracy:true,timeout:5000});
     }
   });
 }
