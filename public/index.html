@@ -207,6 +207,7 @@ input,textarea{outline:none}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="/js/vendor.js"></script>
 <script>
 let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
@@ -239,6 +240,7 @@ function doLogin(email,role){
     hide($('#loginScreen'));
     if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
     else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
+    else if(currentUser.role==='vendor'||currentUser.role==='sponsor'||currentUser.role==='vip'){show($('#dashboardView'));loadVendorDashboard();initVendorControls()}
     else{show($('#eventHQ'));loadEventHQ();initHQControls()}
   }).catch(()=>{$('#loginError').textContent='Login failed'});
 }
