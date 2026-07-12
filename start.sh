@@ -1,8 +1,6 @@
 #!/bin/sh
 cd /app && npm start &
 sleep 8
-# Download and run cloudflare tunnel
-wget -qO /tmp/cf https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-chmod +x /tmp/cf
+# Free permanent tunnel via serveo
 echo "Starting tunnel..."
-/tmp/cf tunnel --url http://localhost:3000 2>&1
+ssh -o StrictHostKeyChecking=no -R carshow:80:localhost:3000 serveo.net 2>&1 &

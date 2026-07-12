@@ -183,6 +183,7 @@ app.post("/api/poker/reset", (req,res) => {
 });
 const follows = {}; // username -> [vendor_username]
 const accounts = loadData('accounts', {}); // email -> { email, password, username, role }
+const spotLikes = loadData('spotLikes', {}); // spotId -> [usernames]
 const USERS_EXPIRY_MS = 60 * 1000;
 
 // Account registration & login
@@ -416,7 +417,12 @@ app.post('/api/spots', (req, res) => {
 app.post('/api/spots/:id/like', (req, res) => {
   const s = spots.find(sp => sp.id === req.params.id);
   if (!s) return res.status(404).json({ error: 'Not found' });
-  s.likes = (s.likes || 0) + 1;
+  var username = req.body.username || 'anon';
+  if (!spotLikes[req.params.id]) spotLikes[req.params.id] = [];
+  if (spotLikes[req.params.id].includes(username)) return res.status(400).json({ error: 'Already liked' });
+  spotLikes[req.params.id].push(username);
+  s.likes = spotLikes[req.params.id].length;
+  saveData('spotLikes', spotLikes);
   res.json({ likes: s.likes });
 });
 
