@@ -190,7 +190,7 @@ app.post('/api/register', (req, res) => {
   if (code && code.toUpperCase() === 'VIP') userRole = 'vip';
   if (code && code.toUpperCase() === 'VENDOR') userRole = 'vendor';
   if (code && code.toUpperCase() === 'SPONSOR') userRole = 'sponsor';
-  accounts[em] = { email: em, username: u, password: hash(password), role: userRole, created: new Date().toISOString() };
+  accounts[email] = { email, username, password: hash(password), role: userRole, created: new Date().toISOString() };
   saveData('accounts', accounts);
   res.json({ success: true, username: u, role: userRole });
 });
