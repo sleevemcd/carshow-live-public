@@ -73,6 +73,13 @@ input,textarea{outline:none}
 </style>
 </head>
 <body>
+<script>
+// Read session from login page
+if(!window.currentUser){
+  try { window.currentUser = JSON.parse(sessionStorage.getItem('carshow_user')); } catch(e) {}
+  if(!window.currentUser) window.location.href = '/login.html';
+}
+</script>
 
 <div id="loginScreen">
 <div class="login-card">
@@ -683,7 +690,14 @@ function updateFollowBtnUI(id){
 }
 window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
-window.addEventListener('load',initLogin);
+window.addEventListener('load',function(){
+  if(!window.currentUser||!window.currentUser.username){window.location.href='/login.html';return}
+  var u=window.currentUser; currentUser=u; currentEvent={id:u.event_id||'demo-event-1',name:'Wasatch Euro Fest',lat:40.5144,lng:-111.4764,location_name:'Midway, Utah',radius_meters:2000,start_date:'2026-07-10T00:00:00Z'};
+  fetch('/api/events/'+currentEvent.id).then(function(r){return r.json()}).then(function(ev){currentEvent=ev||currentEvent});
+  if(u.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
+  else if(u.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
+  else{show($('#eventHQ'));loadEventHQ();initHQControls()}
+});
 
 
 function openPoker(){show($("#pokerModal"));loadPokerHand();$("#pokerHandTab").addEventListener("click",function(){show($("#pokerHandView"));hide($("#pokerBoardView"));$("#pokerHandTab").className="btn-primary btn-sm";$("#pokerBoardTab").className="btn-outline btn-sm"});$("#pokerBoardTab").addEventListener("click",function(){show($("#pokerBoardView"));hide($("#pokerHandView"));$("#pokerBoardTab").className="btn-primary btn-sm";$("#pokerHandTab").className="btn-outline btn-sm";loadPokerBoard()})});$("#pokerBoardTab").on("click",function(){$("#pokerBoardView").show();$("#pokerHandView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerHandTab").attr("class","btn-outline btn-sm");loadPokerBoard()})}
