@@ -522,6 +522,7 @@ function initHQControls(){
   $('#hqLocationToggle').addEventListener('change',function(){
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,enabled:this.checked})});
     this.parentElement.querySelector('span').textContent=this.checked?'On':'Off';
+    if(this.checked&&navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentEvent.id})})},function(){},{enableHighAccuracy:false,timeout:5000})}
   });
   $('#hqDirBtn').addEventListener('click',()=>{show($('#directoryModal'));loadDirectory()});
   $('#closeDirBtn').addEventListener('click',()=>hide($('#directoryModal')));
