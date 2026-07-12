@@ -73,24 +73,32 @@ input,textarea{outline:none}
 </style>
 </head>
 <body>
+
 <div id="loginScreen">
 <div class="login-card">
 <h1>CarShow</h1>
 <p class="subtitle">Live Event Map</p>
-<input type="text" id="loginUser" placeholder="Username" autocomplete="off" />
-<input type="password" id="loginPass" placeholder="Password (optional for demo)" style="margin-bottom:10px" />
-<button id="loginBtn" class="btn-primary">Login</button>
-<div id="loginError" class="error"></div>
-<div style="margin-top:16px;text-align:center">
-<a href="#" id="showRegLink" style="color:#a5b4fc;font-size:13px;text-decoration:none">Create Account</a>
+<div class="code-section">
+<p>Event code (optional)</p>
+<div class="code-row">
+<input type="text" id="loginCode" placeholder="Enter code if you have one" maxlength="10" autocomplete="off" />
 </div>
-<div id="regForm" style="display:none;margin-top:12px;padding:12px;border-radius:12px;border:1px solid #27272a;background:#18181b;text-align:left">
-<p style="font-size:12px;color:#71717a;margin-bottom:8px">Create Account</p>
-<input type="text" id="regUsername" placeholder="Username" style="margin-bottom:6px" />
-<input type="password" id="regPassword" placeholder="Password" style="margin-bottom:6px" />
-<input type="text" id="regCode" placeholder="Event Code (optional)" style="margin-bottom:8px" maxlength="20" />
-<button id="regBtn" class="btn-primary btn-sm" style="width:100%">Register</button>
-<div id="regError" class="error"></div>
+</div>
+<input type="text" id="loginEmail" placeholder="Enter your email (or leave blank)" autocomplete="off" />
+<button id="loginBtn" class="btn-primary">Join Event</button>
+<div id="loginError" class="error"></div>
+<div class="demo-section">
+<p>Demo — Quick Sign In</p>
+<div class="demo-roles">
+<button class="btn-outline btn-sm login-organizer">Organizer</button>
+<button class="btn-outline btn-sm login-sponsor">Sponsor</button>
+<button class="btn-outline btn-sm login-vendor">Vendor</button>
+<button class="btn-outline btn-sm login-vip">VIP</button>
+<button class="btn-outline btn-sm login-registered_user">Registered</button>
+<button class="btn-outline btn-sm login-user">Attendee</button>
+</div>
+<div class="demo-section" style="margin-top:10px;border-color:#27272a;background:rgba(255,255,255,0.03)">
+</div>
 </div>
 </div>
 </div>
@@ -117,7 +125,6 @@ input,textarea{outline:none}
 <div id="controls">
 <button id="locateBtn" title="Jump to my location">◎ My Location</button>
 <button id="pokerBtn">🃏 Poker</button>
-<button id="dealBtn" style="display:none">🤝 Deal Cards</button>
 <div style="position:relative;margin-top:4px">
 <input type="text" id="mapSearch" placeholder="🔍 Search spots, vendors, cars..." style="width:180px;padding:7px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px" />
 <div id="mapSearchResults" style="display:none;position:absolute;top:100%;right:0;width:200px;max-height:150px;overflow-y:auto;background:#18181b;border:1px solid #27272a;border-radius:8px;margin-top:2px;z-index:20"></div>
@@ -205,7 +212,6 @@ input,textarea{outline:none}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<script src="/js/deal.js"></script>
 <script>
 let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
@@ -243,71 +249,10 @@ function doLogin(email,role){
 }
 
 function initLogin(){
-  var loginBtn=$('#loginBtn');
-  loginBtn.addEventListener('click',tryLogin);
-  $('#loginUser').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();tryLogin()}});
-  $('#loginPass').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();tryLogin()}});
-  $('#showRegLink').addEventListener('click',function(e){e.preventDefault();var f=$('#regForm');f.style.display=(f.style.display==='none'||f.style.display==='')?'block':'none'});
-  $('#regBtn').addEventListener('click',function(){
-    var u=$('#regUsername').value.trim();var p=$('#regPassword').value;var c=$('#regCode').value.trim();
-    if(!u||!p){$('#regError').textContent='Username and password required');return}
-    var role='user';if(c){role=c.toUpperCase()==='VIP'?'vip':c.toUpperCase()==='VENDOR'?'vendor':c.toUpperCase()==='SPONSOR'?'sponsor':'user'}
-    fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:u+'@carshow.app',username:u,password:p,role:role,code:c})})
-    .then(function(r){return r.json()}).then(function(d){if(d.error){$('#regError').textContent=d.error)}else{$('#regError').textContent='Created! Login as '+u);$('#regForm').style.display='none';$('#loginUser').value=u}})
-    .catch(function(){$('#regError').textContent='Failed')});
-  });
+  $('#loginBtn').addEventListener('click',()=>handleLogin('user'));
+  $('#loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();handleLogin('user')}});
+  ['organizer','sponsor','vendor','vip','registered_user','user'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
 }
-function tryLogin(){
-  var user=$('#loginUser').value.trim();
-  if(!user){$('#loginError').text='Enter username');return}
-  if(user==='sleve'){enterApp('sleve','admin');return}
-  // Try dummy
-  fetch('/api/dummy-users').then(function(r){return r.json()}).then(function(list){
-    var du=list.find(function(u){return u.username===user});
-    if(du){enterApp(user,du.role);return}
-    fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:'user',event_id:'demo-event-1'})})
-    .then(function(r){return r.json()}).then(function(data){
-      if(data.error){$('#loginError').textContent=data.error);return}enterApp(data.username,data.role);
-    }).catch(function(){$('#loginError').textContent='Login failed')});
-  }).catch(function(){enterApp(user,'user')});
-}
-function enterApp(username,role){
-  currentUser={username:username,role:role,event_id:'demo-event-1'};
-  currentEvent={id:'demo-event-1',name:'Wasatch Euro Fest',lat:40.5144,lng:-111.4764,location_name:'Midway, Utah',radius_meters:2000,start_date:'2026-07-10T00:00:00Z'};
-  hide($('#loginScreen'));
-  if(role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
-  else if(role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
-  else{show($('#eventHQ'));loadEventHQ();initHQControls()}
-}
-function doSimpleLogin(){
-  var user=$('#loginUser').value.trim();if(!user){$('#loginError').textContent='Enter username');return}
-  var pw=$('#loginPass').value;
-  // sleve bypasses password
-  if(user==='sleve'){role='admin';doServerLogin(user,'admin');return}
-  var role='user';
-  // Check if dummy user
-  fetch('/api/dummy-users').then(function(r){return r.json()}).then(function(list){
-    var du=list.find(function(u){return u.username===user});
-    if(du){doServerLogin(user,du.role);return}
-    // Check registered account
-    fetch('/api/accounts/'+user).then(function(r){return r.json()}).then(function(acct){
-      if(acct.error){doServerLogin(user,'user');return}
-      if(acct.password===hashSimple(pw)){doServerLogin(user,acct.role)}else{$('#loginError').textContent='Wrong password')}
-    }).catch(function(){doServerLogin(user,'user')});
-  }).catch(function(){doServerLogin(user,'user')});
-}
-function doServerLogin(user,role){
-  fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:role,event_id:currentEvent?.id||'demo-event-1'})})
-  .then(function(r){return r.json()}).then(function(data){
-    if(data.error){$('#loginError').textContent=data.error);return}
-    currentUser={username:data.username,role:data.role,event_id:data.event.id};currentEvent=data.event;
-    hide($('#loginScreen'));
-    if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
-    else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
-    else{show($('#eventHQ'));loadEventHQ();initHQControls()}
-  }).catch(function(){$('#loginError').text='Login failed'});
-}
-function hashSimple(s){var h=0;for(var i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return'h_'+Math.abs(h).toString(36)}
 function showError(msg){
   var el=document.createElement('div');
   el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;z-index:9999;color:#f4f4f5;text-align:center;font-size:14px';
@@ -346,7 +291,6 @@ function initControls(){
     $('#addVendorAdminBtn').addEventListener('click',openVendorModal);
     loadAdminPanel();
   }
-  if(role==='vendor'||role==='sponsor'){show($('#dealBtn'));$('#dealBtn').addEventListener('click',openDeal);$('#closeDealBtn').addEventListener('click',function(){hide($('#dealModal'))})}
   $('#shareBtn').addEventListener('click',openSpotModal);
   $('#locateBtn').addEventListener('click',()=>{
     if(!navigator.geolocation){useDefaultLocation();return}
@@ -682,19 +626,10 @@ function updateFollowBtnUI(id){
 }
 window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
-window.addEventListener('load',function(){
-  if(!window.currentUser){ try { window.currentUser = JSON.parse(sessionStorage.getItem('carshow_user')); } catch(e) {} }
-  var u=window.currentUser;
-  if(!u||!u.username){window.location.href='/login.html';return}
-  currentUser=u; currentEvent={id:u.event_id||'demo-event-1',name:'Wasatch Euro Fest',lat:40.5144,lng:-111.4764,location_name:'Midway, Utah',radius_meters:2000,start_date:'2026-07-10T00:00:00Z'};
-  fetch('/api/events/'+currentEvent.id).then(function(r){return r.json()}).then(function(ev){currentEvent=ev||currentEvent});
-  if(u.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
-  else if(u.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
-  else{show($('#eventHQ'));loadEventHQ();initHQControls()}
-});
+window.addEventListener('load',initLogin);
 
 
-function openPoker(){show($("#pokerModal"));loadPokerHand();$("#pokerHandTab").addEventListener("click",function(){show($("#pokerHandView"));hide($("#pokerBoardView"));$("#pokerHandTab").className="btn-primary btn-sm";$("#pokerBoardTab").className="btn-outline btn-sm"});$("#pokerBoardTab").addEventListener("click",function(){show($("#pokerBoardView"));hide($("#pokerHandView"));$("#pokerBoardTab").className="btn-primary btn-sm";$("#pokerHandTab").className="btn-outline btn-sm";loadPokerBoard()})});$("#pokerBoardTab").on("click",function(){$("#pokerBoardView").show();$("#pokerHandView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerHandTab").attr("class","btn-outline btn-sm");loadPokerBoard()})}
+function openPoker(){show($("#pokerModal"));loadPokerHand();$("#pokerHandTab").addEventListener("click",function(){$("#pokerHandView").show();$("#pokerBoardView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerBoardTab").attr("class","btn-outline btn-sm")});$("#pokerBoardTab").addEventListener("click",function(){$("#pokerBoardView").show();$("#pokerHandView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerHandTab").attr("class","btn-outline btn-sm");loadPokerBoard()})}
 function loadPokerHand(){fetch("/api/poker/hand/"+currentUser.username).then(function(r){return r.json()}).then(function(hand){var cards=hand.cards||[];var html="";for(var i=0;i<cards.length;i++){var c=cards[i];var color=(c.suit==="♥"||c.suit==="♦")?"#ef4444":"#d4d4d8";html+="<span style=\"font-size:20px;margin:0 4px;color:"+color+"\">"+c.rank+c.suit+"</span>"}$("#pokerHand").innerHTML=html||"Tap a vendor offering poker to collect cards";if(cards.length>=5){$("#collectCardBtn").hide()}else{var nearby="";var found=false;fetch("/api/dummy-users").then(function(r){return r.json()}).then(function(users){var vendors=users.filter(function(u){return u.offering&&u.offering.split(",").includes("poker")&&u.locationEnabled!==false});for(var i=0;i<vendors.length;i++){var v=vendors[i];if(!myLocation)continue;var d=Math.sqrt(Math.pow(v.lat-myLocation.lat,2)+Math.pow(v.lng-myLocation.lng,2));if(d<0.005){found=true;break}}$("#collectCardBtn").toggle(found).text(found?"Collect Card from "+(found&&vendors.length?"nearby vendor":"vendor"):"No poker vendors nearby");$("#pokerVendors").textContent=vendors.filter(function(u){if(!myLocation)return false;var d=Math.sqrt(Math.pow(u.lat-myLocation.lat,2)+Math.pow(u.lng-myLocation.lng,2));return d<0.005}).length+" poker vendors nearby"})}})}
 function collectPokerCard(){if(!myLocation||!currentUser)return;fetch("/api/dummy-users").then(function(r){return r.json()}).then(function(users){var vendors=users.filter(function(u){return u.offering&&u.offering.split(",").includes("poker")&&u.locationEnabled!==false});for(var i=0;i<vendors.length;i++){var v=vendors[i];var d=Math.sqrt(Math.pow(v.lat-myLocation.lat,2)+Math.pow(v.lng-myLocation.lng,2));if(d<0.003){fetch("/api/poker/collect",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:currentUser.username,vendor_username:v.username})}).then(function(r){return r.json()}).then(function(data){if(data.error){showError(data.error)}else{loadPokerHand()}});return}}showError("No poker vendors in range")})};
 </script>
@@ -705,7 +640,6 @@ function collectPokerCard(){if(!myLocation||!currentUser)return;fetch("/api/dumm
 <div id="dirList"></div>
 </div>
 </div>
-<div class="modal-overlay" id="dealModal" style="display:none"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>🤝 Deal Cards</h2><button id="closeDealBtn" class="btn-outline btn-sm">✕</button></div><div id="nearbyUsers" style="max-height:250px;overflow-y:auto"></div></div></div>
 <div class="modal">
 <h2 id="dummyUserTitle">Add User</h2>
 <label>Username</label><input type="text" id="dummyUsername" placeholder="e.g. bmwfanatic" />
