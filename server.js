@@ -195,8 +195,13 @@ app.post('/api/register', (req, res) => {
   if (code && code.toUpperCase() === 'VENDOR') userRole = 'vendor';
   if (code && code.toUpperCase() === 'SPONSOR') userRole = 'sponsor';
   accounts[email] = { email, username, password: hash(password), role: userRole, created: new Date().toISOString() };
+  // Also add to demo users list
+  if (!demoUsers.find(u => u.username === username)) {
+    demoUsers.push({ username, role: userRole, lat: 40.5144, lng: -111.4764, event_id: 'demo-event-1', locationEnabled: false, blurb: '', offering: '', car: '', instagram: '', car_photo: '', email: email, photo: '', display: username });
+  }
   saveData('accounts', accounts);
-  res.json({ success: true, username: u, role: userRole });
+  saveData('demoUsers', demoUsers);
+  res.json({ success: true, username: username, role: userRole });
 });
 
 app.get('/api/accounts/:username', (req,res) => {
