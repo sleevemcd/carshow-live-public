@@ -84,6 +84,14 @@ input,textarea{outline:none}
 <input type="text" id="loginCode" placeholder="Enter code if you have one" maxlength="10" autocomplete="off" />
 </div>
 </div>
+<div style="margin-top:12px;padding:12px;border-radius:12px;border:1px solid #27272a;background:#18181b">
+<p style="font-size:12px;color:#71717a;margin-bottom:8px">Register account</p>
+<input type="email" id="regEmail" placeholder="Email" style="margin-bottom:6px" />
+<input type="text" id="regUsername" placeholder="Username" style="margin-bottom:6px" />
+<input type="password" id="regPassword" placeholder="Password" style="margin-bottom:8px" />
+<button id="regBtn" class="btn-outline btn-sm" style="width:100%">Create Account</button>
+<div id="regError" class="error"></div>
+</div>
 <input type="text" id="loginEmail" placeholder="Enter your email (or leave blank)" autocomplete="off" />
 <button id="loginBtn" class="btn-primary">Join Event</button>
 <div id="loginError" class="error"></div>
@@ -254,6 +262,14 @@ function initLogin(){
   $('#loginBtn').addEventListener('click',()=>handleLogin('user'));
   $('#loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();handleLogin('user')}});
   ['organizer','sponsor','vendor','vip','registered_user','user'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
+  $('#regBtn').addEventListener('click',function(){
+    var email=$('#regEmail').value.trim();var un=$('#regUsername').value.trim();var pw=$('#regPassword').value;
+    if(!email||!un||!pw){$('#regError').text('All fields required');return}
+    $('#regError').text('Creating...');
+    fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,username:un,password:pw})})
+    .then(r=>r.json()).then(d=>{if(d.error){$('#regError').text(d.error)}else{$('#regError').text('Account created! You can now log in.');$('#loginEmail').val(un)}})
+    .catch(function(){$('#regError').text('Registration failed')});
+  });
 }
 function showError(msg){
   var el=document.createElement('div');

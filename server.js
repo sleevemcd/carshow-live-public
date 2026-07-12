@@ -10,6 +10,8 @@ app.use(express.json());
 const DATA_DIR = '/data';
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
 
+// Simple password hash (for MVP - swap with bcrypt for production)
+function hash(pw){ var h=0;for(var i=0;i<pw.length;i++){h=((h<<5)-h)+pw.charCodeAt(i);h|=0}return 'h_'+Math.abs(h).toString(36)}
 function saveData(name, obj) {
   try { fs.writeFileSync(path.join(DATA_DIR, name + '.json'), JSON.stringify(obj, null, 2)); } catch(e) {}
 }
@@ -176,7 +178,36 @@ app.post("/api/poker/reset", (req,res) => {
   res.json({ok:true});
 });
 const follows = {}; // username -> [vendor_username]
+const accounts = loadData('accounts', {}); // email -> { email, password, username, role }
 const USERS_EXPIRY_MS = 60 * 1000;
+
+// Account registration & login
+app.post('/api/register', (req, res) => {
+  var { email, username, password } = req.body;
+  if (!email || !username || !password) return res.status(400).json({ error: 'Email, username, and password required' });
+  if (accounts[email]) return res.status(400).json({ error: 'Email already registered' });
+  accounts[email] = { email, username, password: hash(password), role: 'user', created: new Date().toISOString() };
+  saveData('accounts', accounts);
+  res.json({ success: true, username, role: 'user' });
+});
+
+app.post('/api/login', (req, res) => {
+  var { username, role, event_id } = req.body;
+  var email = username + '@demo.com';
+  if (!username) return res.status(400).json({ error: 'Username required' });
+  // Check if real account login
+  var isDemo = !accounts[email] && !accounts[username];
+  var name = username.trim();
+  var eid = event_id || 'demo-event-1';
+  var ev = events.find(e => e.id === eid) || events[0];
+  var userRole = role || 'attendee';
+  if (!isDemo) {
+    var acct = accounts[email] || accounts[username];
+    if (acct) { name = acct.username; userRole = acct.role; }
+  }
+  users[name] = { username: name, role: userRole, event_id: eid, online: true, locationEnabled: false, lat: null, lng: null, last_seen: Date.now() };
+  res.json({ username: name, role: userRole, event: ev });
+});
 const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/a06502732cdb2e4140be9ba71f0a71cb992e0db60e1a33daa75105c565ab797f%40group.calendar.google.com/public/basic.ics';
 
 // Fetch Google Calendar events
@@ -377,23 +408,6 @@ app.delete('/api/spots/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/login', (req, res) => {
-  const { username, role, event_id } = req.body;
-  if (!username) return res.status(400).json({ error: 'Username required' });
-  const name = username.trim();
-  const eid = event_id || 'demo-event-1';
-  const ev = events.find(e => e.id === eid) || events[0];
-
-  if (!users[name]) {
-    users[name] = { username: name, role: role || 'attendee', event_id: eid, online: true, locationEnabled: true, lat: null, lng: null, last_seen: Date.now() };
-  } else {
-    users[name].event_id = eid;
-    users[name].online = true;
-    users[name].last_seen = Date.now();
-  }
-
-  res.json({ username: name, role: role || 'attendee', event: ev });
-});
 
 app.post('/api/logout', (req, res) => {
   const { username } = req.body;
