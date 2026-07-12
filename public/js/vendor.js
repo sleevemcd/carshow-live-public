@@ -9,7 +9,8 @@ function loadVendorDashboard(){
     var off=me.offering||"";
     var offs=["swag","giveaway","merch","poker","photo"];
     var labels={swag:"Swag",giveaway:"Giveaway",merch:"Merch",poker:"Poker",photo:"Photo"};
-    var h="<h2>Your Offerings</h2><div style='display:flex;flex-wrap:wrap;gap:6px'>";
+    var h="<div style='margin-bottom:12px;padding:16px;border-radius:12px;background:#18181b;border:1px solid #27272a'><div style='font-size:12px;color:#71717a;margin-bottom:8px'>Share Location</div><label style='display:flex;align-items:center;gap:8px;cursor:pointer'><input type='checkbox' id='vendorLocToggle' "+(me.locationEnabled===true?"checked":"")+" style='accent-color:#4f46e5' onchange='toggleVendorLoc()' /><span style='font-size:13px;color:#d4d4d8'>"+(me.locationEnabled===true?"On":"Off")+"</span></label></div>";
+    h+="<h2>Your Offerings</h2><div style='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px'>";
     for(var i=0;i<offs.length;i++){
       var o=offs[i];var active=off.split(",").indexOf(o)>=0;
       h+="<button onclick='toggleVendorOffer(\""+o+"\")' style='padding:8px 16px;border-radius:10px;font-size:13px;border:1px solid "+(active?"#22c55e":"#52525b")+";background:"+(active?"rgba(34,197,94,0.15)":"transparent")+";color:"+(active?"#22c55e":"#a1a1aa")+";cursor:pointer'>"+labels[o]+"</button>";
@@ -41,6 +42,13 @@ function toggleVendorOffer(offer){
     var cur=(me.offering||"").split(",").filter(function(x){return x});
     var idx=cur.indexOf(offer);if(idx>=0)cur.splice(idx,1);else cur.push(offer);
     fetch("/api/dummy-users/"+un,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({offering:cur.join(",")})}).then(function(){loadVendorDashboard()});
+  });
+}
+function toggleVendorLoc(){
+  var un=currentUser.username;
+  fetch("/api/dummy-users").then(function(r){return r.json()}).then(function(list){
+    var me=list.find(function(x){return x.username===un});if(!me)return;
+    fetch("/api/dummy-users/"+un,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({locationEnabled:!me.locationEnabled})}).then(function(){loadVendorDashboard()});
   });
 }
 function updateVendorNearby(){
