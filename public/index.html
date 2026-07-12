@@ -265,8 +265,8 @@ function initLogin(){
     if(!em||!un||!pw){$('#regError').textContent='All fields required';return}
     var role='user';if(co.toUpperCase()==='VIP')role='vip';if(co.toUpperCase()==='VENDOR')role='vendor';if(co.toUpperCase()==='SPONSOR')role='sponsor';
     fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,username:un,password:pw,role:role,code:co})})
-    .then(r=>r.json()).then(d=>{if(d.error)$('#regError').textContent=d.error;else{$('#regError').textContent='Created! Login as '+un;$('#regBox').style.display='none';$('#loginEmail').value=un}})
-    .catch(function(){$('#regError').textContent='Failed'});
+    .then(r=>{if(!r.ok){$('#regError').textContent='Error '+r.status;return r.text().then(t=>{$('#regError').textContent=t})}return r.json()}).then(d=>{if(d&&d.error)$('#regError').textContent=d.error;else if(d){$('#regError').textContent='Created!';$('#regBox').style.display='none';$('#loginEmail').value=d.username}})
+    .catch(function(e){$('#regError').textContent='Network error: check server' });
   });
 }
 function showError(msg){
