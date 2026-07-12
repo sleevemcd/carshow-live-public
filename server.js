@@ -183,12 +183,22 @@ const USERS_EXPIRY_MS = 60 * 1000;
 
 // Account registration & login
 app.post('/api/register', (req, res) => {
-  var { email, username, password } = req.body;
+  var { email, username, password, role, code } = req.body;
   if (!email || !username || !password) return res.status(400).json({ error: 'Email, username, and password required' });
   if (accounts[email]) return res.status(400).json({ error: 'Email already registered' });
-  accounts[email] = { email, username, password: hash(password), role: 'user', created: new Date().toISOString() };
+  var userRole = role || 'user';
+  if (code && code.toUpperCase() === 'VIP') userRole = 'vip';
+  if (code && code.toUpperCase() === 'VENDOR') userRole = 'vendor';
+  if (code && code.toUpperCase() === 'SPONSOR') userRole = 'sponsor';
+  accounts[email] = { email, username, password: hash(password), role: userRole, created: new Date().toISOString() };
   saveData('accounts', accounts);
-  res.json({ success: true, username, role: 'user' });
+  res.json({ success: true, username, role: userRole });
+});
+
+app.get('/api/accounts/:username', (req,res) => {
+  var found = Object.values(accounts).find(a => a.username === req.params.username);
+  if (found) res.json(found);
+  else res.json({ error: 'not found' });
 });
 
 app.post('/api/login', (req, res) => {

@@ -79,6 +79,7 @@ input,textarea{outline:none}
 <h1>CarShow</h1>
 <p class="subtitle">Live Event Map</p>
 <input type="text" id="loginUser" placeholder="Username" autocomplete="off" />
+<input type="password" id="loginPass" placeholder="Password (optional for demo)" style="margin-bottom:10px" />
 <button id="loginBtn" class="btn-primary">Login</button>
 <div id="loginError" class="error"></div>
 <div style="margin-top:16px;text-align:center">
@@ -245,6 +246,7 @@ function doLogin(email,role){
 function initLogin(){
   $('#loginBtn').addEventListener('click',doSimpleLogin);
   $('#loginUser').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSimpleLogin()}});
+  $('#loginPass').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSimpleLogin()}});
   $('#showRegLink').addEventListener('click',function(e){e.preventDefault();$('#regForm').toggle()});
   $('#regBtn').addEventListener('click',function(){
     var u=$('#regUsername').value.trim();var p=$('#regPassword').value;var c=$('#regCode').value.trim();
@@ -258,30 +260,33 @@ function initLogin(){
 }
 function doSimpleLogin(){
   var user=$('#loginUser').value.trim();if(!user){$('#loginError').text('Enter username');return}
-  var role='user';if(user==='sleve')role='admin';
+  var pw=$('#loginPass').value;
+  // sleve bypasses password
+  if(user==='sleve'){role='admin';doServerLogin(user,'admin');return}
+  var role='user';
+  // Check if dummy user
   fetch('/api/dummy-users').then(function(r){return r.json()}).then(function(list){
-    var du=list.find(function(u){return u.username===user});if(du)role=du.role;
-    fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:role,event_id:currentEvent?.id||'demo-event-1'})})
-    .then(function(r){return r.json()}).then(function(data){
-      if(data.error){$('#loginError').text(data.error);return}
-      currentUser={username:data.username,role:data.role,event_id:data.event.id};currentEvent=data.event;
-      hide($('#loginScreen'));
-      if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
-      else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
-      else{show($('#eventHQ'));loadEventHQ();initHQControls()}
-    }).catch(function(){$('#loginError').text='Login failed'});
-  }).catch(function(){
-    fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:role,event_id:'demo-event-1'})})
-    .then(function(r){return r.json()}).then(function(data){
-      if(data.error){$('#loginError').text(data.error);return}
-      currentUser={username:data.username,role:data.role,event_id:data.event.id};currentEvent=data.event;
-      hide($('#loginScreen'));
-      if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
-      else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
-      else{show($('#eventHQ'));loadEventHQ();initHQControls()}
-    }).catch(function(){$('#loginError').text='Login failed'});
-  });
+    var du=list.find(function(u){return u.username===user});
+    if(du){doServerLogin(user,du.role);return}
+    // Check registered account
+    fetch('/api/accounts/'+user).then(function(r){return r.json()}).then(function(acct){
+      if(acct.error){doServerLogin(user,'user');return}
+      if(acct.password===hashSimple(pw)){doServerLogin(user,acct.role)}else{$('#loginError').text('Wrong password')}
+    }).catch(function(){doServerLogin(user,'user')});
+  }).catch(function(){doServerLogin(user,'user')});
 }
+function doServerLogin(user,role){
+  fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:role,event_id:currentEvent?.id||'demo-event-1'})})
+  .then(function(r){return r.json()}).then(function(data){
+    if(data.error){$('#loginError').text(data.error);return}
+    currentUser={username:data.username,role:data.role,event_id:data.event.id};currentEvent=data.event;
+    hide($('#loginScreen'));
+    if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
+    else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
+    else{show($('#eventHQ'));loadEventHQ();initHQControls()}
+  }).catch(function(){$('#loginError').text='Login failed'});
+}
+function hashSimple(s){var h=0;for(var i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return'h_'+Math.abs(h).toString(36)}
 function showError(msg){
   var el=document.createElement('div');
   el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;z-index:9999;color:#f4f4f5;text-align:center;font-size:14px';
