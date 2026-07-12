@@ -73,18 +73,6 @@ input,textarea{outline:none}
 </style>
 </head>
 <body>
-<script>
-(function(){
-  if(!window.currentUser){ try { window.currentUser = JSON.parse(sessionStorage.getItem('carshow_user')); } catch(e) {} }
-  if(!window.currentUser){ document.body.innerHTML='Redirecting...'; window.location.href='/login.html'; return }
-  var u=window.currentUser; currentUser=u; currentEvent={id:u.event_id||'demo-event-1',name:'Wasatch Euro Fest',lat:40.5144,lng:-111.4764,location_name:'Midway, Utah',radius_meters:2000,start_date:'2026-07-10T00:00:00Z'};
-  document.getElementById('app').style.display='none';
-  if(u.role==='admin'){ show($('#dashboardView')); loadDashboardEvents(); initDashboardControls(); }
-  else if(u.role==='organizer'){ show($('#dashboardView')); loadOrganizerEvents(); initOrganizerControls(); }
-  else{ show($('#eventHQ')); loadEventHQ(); initHQControls(); }
-})();
-</script>
-
 <div id="loginScreen">
 <div class="login-card">
 <h1>CarShow</h1>
@@ -695,7 +683,9 @@ function updateFollowBtnUI(id){
 window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
 window.addEventListener('load',function(){
-  var u=window.currentUser; if(!u||!u.username){window.location.href='/login.html';return}
+  if(!window.currentUser){ try { window.currentUser = JSON.parse(sessionStorage.getItem('carshow_user')); } catch(e) {} }
+  var u=window.currentUser;
+  if(!u||!u.username){window.location.href='/login.html';return}
   currentUser=u; currentEvent={id:u.event_id||'demo-event-1',name:'Wasatch Euro Fest',lat:40.5144,lng:-111.4764,location_name:'Midway, Utah',radius_meters:2000,start_date:'2026-07-10T00:00:00Z'};
   fetch('/api/events/'+currentEvent.id).then(function(r){return r.json()}).then(function(ev){currentEvent=ev||currentEvent});
   if(u.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
