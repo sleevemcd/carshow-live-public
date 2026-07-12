@@ -19,6 +19,11 @@ function loadVendorDashboard(){
   });
 }
 function initVendorControls(){
+  // Hide admin-only sections
+  var adminSections=document.querySelectorAll('a[href="/users.html"], a[href="/pins.html"]');
+  for(var i=0;i<adminSections.length;i++) adminSections[i].parentElement.style.display="none";
+  // Hide poker simulator
+  var pokerSim=document.querySelector('[class*="Poker Simulator"]'); if(!pokerSim) pokerSim=document.getElementById("simCollectBtn"); if(pokerSim){var p=pokerSim;while(p&&p.id!=="dashboardView")p=p.parentElement;if(p){var sib=p.previousElementSibling;while(sib){if(sib.textContent&&sib.textContent.indexOf("Poker")>=0)sib.style.display="none";sib=sib.previousElementSibling}}}
   document.getElementById("dashRole").textContent=currentUser.role.replace(/_/g," ")+": "+currentUser.username;
   document.getElementById("dashLogoutBtn").addEventListener("click",dashLogout);
   document.getElementById("dashNotifBtn").addEventListener("click",function(){show($("#notifModal"));loadNotifs()});
