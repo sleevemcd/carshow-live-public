@@ -184,10 +184,8 @@ const USERS_EXPIRY_MS = 60 * 1000;
 // Account registration & login
 app.post('/api/register', (req, res) => {
   var { email, username, password, role, code } = req.body;
-  var u = username || email;
-  if (!u || !password) return res.status(400).json({ error: 'Username and password required' });
-  var em = email || (u + '@carshow.app');
-  if (accounts[em]) return res.status(400).json({ error: 'Already registered' });
+  if (!email || !username || !password) return res.status(400).json({ error: 'Email, username, and password required' });
+  if (accounts[email]) return res.status(400).json({ error: 'Email already registered' });
   var userRole = role || 'user';
   if (code && code.toUpperCase() === 'VIP') userRole = 'vip';
   if (code && code.toUpperCase() === 'VENDOR') userRole = 'vendor';

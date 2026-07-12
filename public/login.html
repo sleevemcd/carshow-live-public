@@ -6,23 +6,24 @@
 <button id="loginBtn">Login</button><div class="err" id="err"></div>
 <div style="margin-top:12px"><a id="showReg">Create Account</a></div>
 <div class="reg" id="reg"><p style="color:#71717a;font-size:12px;margin-bottom:8px">Create Account</p>
+<input type="email" id="rEmail" placeholder="Email" />
 <input type="text" id="rUser" placeholder="Username" />
 <input type="password" id="rPass" placeholder="Password" />
 <input type="text" id="rCode" placeholder="Event Code (optional)" maxlength="20" />
 <button id="regBtn">Register</button><div class="err" id="rErr"></div></div></div>
 <script>
 var U=document.getElementById('user'),P=document.getElementById('pass'),E=document.getElementById('err');
-var R=document.getElementById('reg'),RU=document.getElementById('rUser'),RP=document.getElementById('rPass'),RC=document.getElementById('rCode'),RE=document.getElementById('rErr');
+var R=document.getElementById('reg'),RM=document.getElementById('rEmail'),RU=document.getElementById('rUser'),RP=document.getElementById('rPass'),RC=document.getElementById('rCode'),RE=document.getElementById('rErr');
 document.getElementById('loginBtn').onclick=login;
 U.onkeydown=function(e){if(e.key==='Enter')login()};
 P.onkeydown=function(e){if(e.key==='Enter')login()};
 document.getElementById('showReg').onclick=function(){R.style.display=R.style.display==='none'?'block':'none'};
 document.getElementById('regBtn').onclick=function(){
-  var u=RU.value.trim(),p=RP.value,c=RC.value.trim();
-  if(!u||!p){RE.textContent='Required';return}
+  var e=RM.value.trim(),u=RU.value.trim(),p=RP.value,c=RC.value.trim();
+  if(!e||!u||!p){RE.textContent='Email, username, and password required';return}
   var role='user';if(c.toUpperCase()==='VIP')role='vip';if(c.toUpperCase()==='VENDOR')role='vendor';if(c.toUpperCase()==='SPONSOR')role='sponsor';
-  fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:u+'@a.pp',username:u,password:p,role:role,code:c})})
-  .then(function(r){return r.json()}).then(function(d){if(d.error)RE.textContent=d.error;else{RE.textContent='Created!';U.value=u;R.style.display='none'}}).catch(function(){RE.textContent='Failed'});
+  fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,username:u,password:p,role:role,code:c})})
+  .then(function(r){return r.json()}).then(function(d){if(d.error)RE.textContent=d.error;else{RE.textContent='Created! Login as '+u;U.value=u;R.style.display='none'}}).catch(function(){RE.textContent='Failed'});
 };
 function login(){
   var u=U.value.trim();if(!u){E.textContent='Enter username';return}
