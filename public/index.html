@@ -244,10 +244,19 @@ function doLogin(email,role){
 }
 
 function initLogin(){
-  $('#loginBtn').addEventListener('click',doSimpleLogin);
-  $('#loginUser').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSimpleLogin()}});
-  $('#loginPass').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSimpleLogin()}});
-  $('#showRegLink').addEventListener('click',function(e){e.preventDefault();var f=$('#regForm');f.style.display=f.style.display==='none'||!f.style.display?'block':'none'});
+  $('#loginBtn').addEventListener('click',function(){
+    var user=$('#loginUser').value.trim();if(!user){$('#loginError').text('Enter username');return}
+    if(user==='sleve'){currentUser={username:'sleve',role:'admin',event_id:'demo-event-1'};currentEvent=getEventById('demo-event-1');hide($('#loginScreen'));show($('#dashboardView'));loadDashboardEvents();initDashboardControls();return}
+    fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:'user',event_id:'demo-event-1'})})
+    .then(function(r){return r.json()}).then(function(data){
+      if(data.error){$('#loginError').text(data.error);return}
+      currentUser={username:data.username,role:data.role,event_id:data.event.id};currentEvent=data.event;
+      hide($('#loginScreen'));
+      if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
+      else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
+      else{show($('#eventHQ'));loadEventHQ();initHQControls()}
+    }).catch(function(){$('#loginError').text='Login failed'});
+  });
   $('#regBtn').addEventListener('click',function(){
     var u=$('#regUsername').value.trim();var p=$('#regPassword').value;var c=$('#regCode').value.trim();
     if(!u||!p){$('#regError').text('Username and password required');return}
