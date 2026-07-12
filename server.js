@@ -81,6 +81,10 @@ app.put('/api/dummy-users/:username', (req, res) => {
   var idx = demoUsers.findIndex(u => u.username === req.params.username);
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   Object.assign(demoUsers[idx], req.body);
+  // If username changed in body, update the key
+  if (req.body.username && req.body.username !== demoUsers[idx].username) {
+    demoUsers[idx].username = req.body.username;
+  }
   res.json(demoUsers[idx]);
 });
 app.delete('/api/dummy-users/:username', (req, res) => {

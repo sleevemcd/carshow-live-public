@@ -461,8 +461,9 @@ function loadDummyUsers(){
   });
 }
 function openDummyUserModal(u){
+  window._editingUser = u ? u.username : null;
   show($('#dummyUserModal'));$('#dummyUserTitle').textContent=u?'Edit User':'Add User';
-  $('#dummyUsername').value=u?u.username:'';$('#dummyUsername').disabled=!!u;
+  $('#dummyUsername').value=u?u.username:'';
   $('#dummyDisplay').value=u&&u.display?u.display:'';$('#dummyRole').value=u?u.role:'attendee';
   $('#dummyBlurb').value=u&&u.blurb?u.blurb:'';
   $('#dummyCar').value=u&&u.car?u.car:'';
@@ -477,9 +478,9 @@ function saveDummyUser(){
   var username=$('#dummyUsername').value.trim();if(!username)return;
   var offers=[];document.querySelectorAll('.dummyOffer:checked').forEach(cb=>offers.push(cb.value));
   var data={username,display:$('#dummyDisplay').value.trim(),role:$('#dummyRole').value,blurb:$('#dummyBlurb').value.trim(),car:$('#dummyCar').value.trim(),instagram:$('#dummyInsta').value.trim(),car_photo:$('#dummyPhoto').value.trim(),email:$('#dummyEmail').value.trim(),lat:parseFloat($('#dummyLat').value)||40.5144,lng:parseFloat($('#dummyLng').value)||-111.4764,event_id:'demo-event-1',offering:offers.join(','),locationEnabled:$('#dummyLocationOn').checked};
-  var isEdit=$('#dummyUsername').disabled;
-  var m=isEdit?'PUT':'POST';var u=isEdit?'/api/dummy-users/'+username:'/api/dummy-users';
-  fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{hide($('#dummyUserModal'));loadDummyUsers()});
+  var isEdit=!!window._editingUser;
+  var m=isEdit?'PUT':'POST';var u=isEdit?'/api/dummy-users/'+window._editingUser:'/api/dummy-users';
+  fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(()=>{window._editingUser=null;hide($('#dummyUserModal'));loadDummyUsers()});
 }
 function pickMapCenter(){if(map){var c=map.getCenter();$('#dummyLat').value=c.lat.toFixed(6);$('#dummyLng').value=c.lng.toFixed(6)}}
 window.editDummyUser=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u)openDummyUserModal(u)})};
@@ -670,7 +671,7 @@ function collectPokerCard(){if(!myLocation||!currentUser)return;fetch("/api/dumm
 <label style="font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:4px"><input type="checkbox" class="dummyOffer" value="photo" /> Photo Op</label>
 </div>
 <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dummyLocationOn" checked /> Location sharing on</label>
-<div class="btn-row"><button id="cancelDummyUserBtn" class="btn-outline">Cancel</button><button id="saveDummyUserBtn" class="btn-primary">Save</button></div>
+<div class="btn-row"><button id="cancelDummyUserBtn" class="btn-outline" onclick="window._editingUser=null;hide(document.getElementById('dummyUserModal'))">Cancel</button><button id="saveDummyUserBtn" class="btn-primary">Save</button></div>
 </div>
 </div>
 <div class="modal-overlay" id="pokerModal" style="display:none"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>🃏 Poker Run</h2><button id="closePokerBtn" class="btn-outline btn-sm">✕</button></div><div style="display:flex;gap:4px;margin-bottom:12px"><button id="pokerHandTab" class="btn-primary btn-sm" style="flex:1">My Hand</button><button id="pokerBoardTab" class="btn-outline btn-sm" style="flex:1">Leaderboard</button></div><div id="pokerHandView"><div id="pokerHandRank" style="text-align:center;font-size:12px;color:#a5b4fc;margin-bottom:6px"></div><div id="pokerHand" style="text-align:center;margin-bottom:16px;font-size:24px">No cards yet</div><div id="pokerVendors" style="margin-bottom:12px;font-size:12px;color:#71717a"></div><button id="collectCardBtn" class="btn-primary btn-sm" style="display:none;width:100%">Collect Card</button></div><div id="pokerBoardView" style="display:none"><div id="pokerBoard" style="max-height:300px;overflow-y:auto"></div></div></div></div>
