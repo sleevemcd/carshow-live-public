@@ -251,11 +251,11 @@ function initLogin(){
   $('#showRegLink').addEventListener('click',function(e){e.preventDefault();var f=$('#regForm');f.style.display=(f.style.display==='none'||f.style.display==='')?'block':'none'});
   $('#regBtn').addEventListener('click',function(){
     var u=$('#regUsername').value.trim();var p=$('#regPassword').value;var c=$('#regCode').value.trim();
-    if(!u||!p){$('#regError').text('Username and password required');return}
+    if(!u||!p){$('#regError').textContent='Username and password required');return}
     var role='user';if(c){role=c.toUpperCase()==='VIP'?'vip':c.toUpperCase()==='VENDOR'?'vendor':c.toUpperCase()==='SPONSOR'?'sponsor':'user'}
     fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:u+'@carshow.app',username:u,password:p,role:role,code:c})})
-    .then(function(r){return r.json()}).then(function(d){if(d.error){$('#regError').text(d.error)}else{$('#regError').text('Created! Login as '+u);$('#regForm').style.display='none';$('#loginUser').value=u}})
-    .catch(function(){$('#regError').text('Failed')});
+    .then(function(r){return r.json()}).then(function(d){if(d.error){$('#regError').textContent=d.error)}else{$('#regError').textContent='Created! Login as '+u);$('#regForm').style.display='none';$('#loginUser').value=u}})
+    .catch(function(){$('#regError').textContent='Failed')});
   });
 }
 function tryLogin(){
@@ -268,8 +268,8 @@ function tryLogin(){
     if(du){enterApp(user,du.role);return}
     fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:'user',event_id:'demo-event-1'})})
     .then(function(r){return r.json()}).then(function(data){
-      if(data.error){$('#loginError').text(data.error);return}enterApp(data.username,data.role);
-    }).catch(function(){$('#loginError').text('Login failed')});
+      if(data.error){$('#loginError').textContent=data.error);return}enterApp(data.username,data.role);
+    }).catch(function(){$('#loginError').textContent='Login failed')});
   }).catch(function(){enterApp(user,'user')});
 }
 function enterApp(username,role){
@@ -281,7 +281,7 @@ function enterApp(username,role){
   else{show($('#eventHQ'));loadEventHQ();initHQControls()}
 }
 function doSimpleLogin(){
-  var user=$('#loginUser').value.trim();if(!user){$('#loginError').text('Enter username');return}
+  var user=$('#loginUser').value.trim();if(!user){$('#loginError').textContent='Enter username');return}
   var pw=$('#loginPass').value;
   // sleve bypasses password
   if(user==='sleve'){role='admin';doServerLogin(user,'admin');return}
@@ -293,14 +293,14 @@ function doSimpleLogin(){
     // Check registered account
     fetch('/api/accounts/'+user).then(function(r){return r.json()}).then(function(acct){
       if(acct.error){doServerLogin(user,'user');return}
-      if(acct.password===hashSimple(pw)){doServerLogin(user,acct.role)}else{$('#loginError').text('Wrong password')}
+      if(acct.password===hashSimple(pw)){doServerLogin(user,acct.role)}else{$('#loginError').textContent='Wrong password')}
     }).catch(function(){doServerLogin(user,'user')});
   }).catch(function(){doServerLogin(user,'user')});
 }
 function doServerLogin(user,role){
   fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,role:role,event_id:currentEvent?.id||'demo-event-1'})})
   .then(function(r){return r.json()}).then(function(data){
-    if(data.error){$('#loginError').text(data.error);return}
+    if(data.error){$('#loginError').textContent=data.error);return}
     currentUser={username:data.username,role:data.role,event_id:data.event.id};currentEvent=data.event;
     hide($('#loginScreen'));
     if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
