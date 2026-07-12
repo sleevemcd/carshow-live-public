@@ -16,7 +16,7 @@
 </div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-var pickMap,pickMarker;
+var pickMap,pickMarker,editingPinId=null;
 function initMapPicker(lat,lng){
   var el=document.getElementById('pickMap');if(!el)return;
   if(pickMap)pickMap.remove();
@@ -51,19 +51,44 @@ function loadPins(){
       var rows='';
       for(var i=0;i<filtered.length;i++){
         var s=filtered[i];var em=s.spot_type==='car_spot'?'🚗':s.spot_type==='food'?'🍔':'📍';
-        rows+='<tr><td>'+em+' '+s.spot_type+'</td><td>'+esc(s.label)+'</td><td>'+esc(s.username||'anon')+'</td><td>'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4)+'</td><td>❤️ '+(s.likes||0)+'</td><td style="font-size:11px;color:#71717a">'+new Date(s.expires_at).toLocaleString()+'</td><td><button class="btn-danger btn-sm" onclick="delPin(\''+s.id+'\')">Del</button></td></tr>';
+        rows+='<tr><td>'+em+' '+s.spot_type+'</td><td>'+esc(s.label)+'</td><td>'+esc(s.username||'anon')+'</td><td>'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4)+'</td><td>❤️ '+(s.likes||0)+'</td><td style="font-size:11px;color:#71717a">'+new Date(s.expires_at).toLocaleString()+'</td><td><button class="btn btn-outline btn-sm" onclick="editPin(\''+s.id+'\')">Edit</button> <button class="btn-danger btn-sm" onclick="delPin(\''+s.id+'\')">Del</button></td></tr>';
       }
       document.getElementById('pinTable').innerHTML=rows||'<tr><td colspan="7" style="color:#71717a;text-align:center">No pins</td></tr>';
     }
   });
 }
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function openForm(){document.getElementById('modalTitle').textContent='Add Pin';document.getElementById('fLabel').value='';document.getElementById('fDesc').value='';document.getElementById('fType').value='spot';document.getElementById('fLat').value=40.5144;document.getElementById('fLng').value=-111.4764;document.getElementById('modal').classList.add('open');initMapPicker(40.5144,-111.4764)}
-function closeForm(){document.getElementById('modal').classList.remove('open')}
+function openForm(){editingPinId=null;document.getElementById('modalTitle').textContent='Add Pin';document.getElementById('fLabel').value='';document.getElementById('fDesc').value='';document.getElementById('fType').value='spot';document.getElementById('fLat').value=40.5144;document.getElementById('fLng').value=-111.4764;document.getElementById('modal').classList.add('open');initMapPicker(40.5144,-111.4764)}
+function editPin(id){
+  // Find pin across all events
+  fetch('/api/events').then(function(r){return r.json()}).then(function(evs){
+    var found=null;
+    var remaining=evs.length;
+    evs.forEach(function(e){
+      fetch('/api/spots/'+e.id).then(function(r){return r.json()}).then(function(spots){
+        if(!found){ var s=spots.find(function(x){return x.id===id}); if(s){found=s;found.event_id=e.id} }
+        remaining--; if(remaining===0&&found) showEditForm(found);
+      });
+    });
+  });
+  function showEditForm(s){
+    editingPinId=s.id;
+    document.getElementById('modalTitle').textContent='Edit Pin';
+    document.getElementById('fLabel').value=s.label||'';
+    document.getElementById('fDesc').value=s.description||'';
+    document.getElementById('fType').value=s.spot_type||'spot';
+    document.getElementById('fLat').value=s.lat;document.getElementById('fLng').value=s.lng;
+    document.getElementById('fEvent').value=s.event_id||'demo-event-1';
+    document.getElementById('modal').classList.add('open');initMapPicker(s.lat,s.lng);
+  }
+}
+function closeForm(){document.getElementById('modal').classList.remove('open');editingPinId=null}
 function savePin(){
   var data={event_id:document.getElementById('fEvent').value||'demo-event-1',label:document.getElementById('fLabel').value.trim(),description:document.getElementById('fDesc').value.trim(),lat:parseFloat(document.getElementById('fLat').value)||40.5144,lng:parseFloat(document.getElementById('fLng').value)||-111.4764,spot_type:document.getElementById('fType').value,username:'admin'};
   if(!data.label){alert('Label required');return}
-  fetch('/api/spots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){if(!r.ok){alert('Server error: '+r.status);return}closeForm();loadPins()}).catch(function(e){alert('Fail: '+e.message)})
+  var method=editingPinId?'PUT':'POST';
+  var url=editingPinId?'/api/spots/'+editingPinId:'/api/spots';
+  fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){if(!r.ok){alert('Server error: '+r.status);return}closeForm();loadPins()}).catch(function(e){alert('Fail: '+e.message)})
 }
 function delPin(id){if(confirm('Delete?')){fetch('/api/spots/'+id,{method:'DELETE'}).then(function(){loadPins()})}}
 document.getElementById('filterType').addEventListener('change',loadPins);

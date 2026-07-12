@@ -411,6 +411,13 @@ app.post('/api/spots/:id/like', (req, res) => {
   res.json({ likes: s.likes });
 });
 
+app.put('/api/spots/:id', (req, res) => {
+  var idx = spots.findIndex(s => s.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  Object.assign(spots[idx], req.body);
+  res.json(spots[idx]);
+});
+
 app.delete('/api/spots/:id', (req, res) => {
   const idx = spots.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
