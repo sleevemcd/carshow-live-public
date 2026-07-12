@@ -488,8 +488,8 @@ app.get('/api/users/:eventId', (req, res) => {
       var v = u.role === 'vendor' ? vendors.find(vd => vd.user_id === u.username || (vd.business_name && u.username && vd.business_name.toLowerCase().includes(u.username.toLowerCase()))) : null;
       // Use real-time location if user has an active session
       var session = users[u.username];
-      var lat = (session && session.online && session.lat) ? session.lat : u.lat;
-      var lng = (session && session.online && session.lng) ? session.lng : u.lng;
+      var lat = (session && session.lat) ? session.lat : u.lat;
+      var lng = (session && session.lng) ? session.lng : u.lng;
       return { username: u.username, lat: lat, lng: lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', car: u.car || '', instagram: u.instagram || '', car_photo: u.car_photo || '', email: u.email || '', photo: u.photo || '', business_name: v ? v.business_name : '', description: v ? v.description : '', locationEnabled: u.locationEnabled !== false };
     });
   res.json([...real, ...demo]);
