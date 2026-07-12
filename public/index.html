@@ -247,7 +247,7 @@ function initLogin(){
   $('#loginBtn').addEventListener('click',doSimpleLogin);
   $('#loginUser').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSimpleLogin()}});
   $('#loginPass').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSimpleLogin()}});
-  $('#showRegLink').addEventListener('click',function(e){e.preventDefault();$('#regForm').toggle()});
+  $('#showRegLink').addEventListener('click',function(e){e.preventDefault();var f=$('#regForm');f.style.display=f.style.display==='none'||!f.style.display?'block':'none'});
   $('#regBtn').addEventListener('click',function(){
     var u=$('#regUsername').value.trim();var p=$('#regPassword').value;var c=$('#regCode').value.trim();
     if(!u||!p){$('#regError').text('Username and password required');return}
