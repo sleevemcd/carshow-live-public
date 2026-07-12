@@ -441,6 +441,7 @@ app.post('/api/location', (req, res) => {
     users[username].lat = lat;
     users[username].lng = lng;
     users[username].last_seen = Date.now();
+    users[username].last_seen = Date.now();
     users[username].online = true;
     if (event_id) users[username].event_id = event_id;
   }
@@ -449,8 +450,12 @@ app.post('/api/location', (req, res) => {
 
 app.post('/api/location/toggle', (req, res) => {
   const { username } = req.body;
-  if (!username || !users[username]) return res.status(400).json({ error: 'User not found' });
+  if (!username) return res.status(400).json({ error: 'Username required' });
+  if (!users[username]) return res.status(400).json({ error: 'User not found' });
   users[username].locationEnabled = !users[username].locationEnabled;
+  // Also sync to dummy user data
+  var du = demoUsers.find(u => u.username === username);
+  if (du) du.locationEnabled = users[username].locationEnabled;
   // Notify followers when someone turns location ON
   if (users[username].locationEnabled) {
     Object.keys(follows).forEach(follower => {
