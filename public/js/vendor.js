@@ -48,7 +48,15 @@ function toggleVendorLoc(){
   var un=currentUser.username;
   fetch("/api/dummy-users").then(function(r){return r.json()}).then(function(list){
     var me=list.find(function(x){return x.username===un});if(!me)return;
-    fetch("/api/dummy-users/"+un,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({locationEnabled:!me.locationEnabled})}).then(function(){loadVendorDashboard()});
+    var newVal = !me.locationEnabled;
+    fetch("/api/dummy-users/"+un,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({locationEnabled:newVal})}).then(function(){loadVendorDashboard()});
+    // Also send to session and start GPS if needed
+    fetch("/api/location/toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:un})});
+    if(newVal && navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(function(p){
+        fetch("/api/location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:un,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentUser.event_id||"demo-event-1"})});
+      },function(){},{enableHighAccuracy:false,timeout:5000});
+    }
   });
 }
 function updateVendorNearby(){
