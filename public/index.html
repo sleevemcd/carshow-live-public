@@ -593,6 +593,7 @@ function showInfoPopup(){
 window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{map.setView([e.lat,e.lng],16);$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name})};
 window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#eventHQ'));loadEventHQ();initHQControls()})}
 function loadEventMarkers(){
+  try{
   fetch('/api/events').then(r=>r.json()).then(list=>{
     var now=Date.now();
     list.filter(e=>e.is_active&&e.lat&&e.lng).forEach(e=>{
@@ -607,6 +608,7 @@ function loadEventMarkers(){
       }
     });
   });
+  }catch(e){}
 }
 window.toggleFollow=function(id,name,type){
   if(!currentUser)return;
