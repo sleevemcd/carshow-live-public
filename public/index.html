@@ -374,7 +374,13 @@ function addVendorMarker(v){if(!v.is_active)return;var icon=L.divIcon({className
 function loadSpots(){fetch('/api/spots/'+getEventId()).then(r=>r.json()).then(list=>{Object.values(spotMarkers).forEach(m=>map.removeLayer(m));spotMarkers={};list.forEach(addSpotMarker)})}
 function addSpotMarker(s){var isCar=s.spot_type==='car_spot';var isFood=s.spot_type==='food';var icon=L.divIcon({className:'',html:'<div style="width:28px;height:28px;border-radius:50%;background:'+(isCar?'#f59e0b':isFood?'#ef4444':'#22c55e')+';border:2px solid '+(isCar?'#fbbf24':isFood?'#fca5a5':'#4ade80')+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(isCar?'🚗':isFood?'🍔':'📍')+'</div>',iconSize:[28,28],iconAnchor:[14,14]});var m=L.marker([s.lat,s.lng],{icon}).addTo(map).bindPopup('');updateSpotPopup(m,s);m.on('click',()=>{fetch('/api/spots/'+s.id+'/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser?.username||'anon'})}).then(r=>r.json()).then(d=>{if(spotMarkers[s.id])s.likes=d.likes;updateSpotPopup(m,s)})});spotMarkers[s.id]=m}
 function updateSpotPopup(m,s){var exp=s.expires_at?new Date(s.expires_at).getTime()-Date.now():0;var timeStr=exp>0?(exp<60000?'<1 min':Math.ceil(exp/60000)+' min'):'expired';var timer=s.spot_type==='car_spot'?'<br><small style="color:#f59e0b">⏱ '+timeStr+' left</small>':'';m.setPopupContent('<b>'+esc(s.label)+'</b>'+(s.description?'<br>'+esc(s.description):'')+'<br><small>by '+esc(s.username)+' · ❤️ '+(s.likes||0)+'</small>'+timer+'<br><button onclick="window._likeSpot(\''+s.id+'\')" style="margin-top:6px;padding:4px 10px;border-radius:8px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px">❤️ Like</button>')}
-window._likeSpot=function(id){fetch('/api/spots/'+id+'/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser?.username||'anon'})}).then(r=>r.json()).then(d=>{var m=spotMarkers[id];if(m){var s={id:id,likes:d.likes};updateSpotPopup(m,s)}})}
+window._likeSpot=function(id){
+  fetch('/api/spots/'+id+'/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser?.username||'anon'})})
+  .then(function(r){return r.json()}).then(function(d){
+    if(d.error){showError(d.error);return}
+    var m=spotMarkers[id];if(m){var s=spotMarkers[id];if(s)s.likes=d.likes;updateSpotPopup(m,s||{id:id,spot_type:'spot',label:'',username:'',likes:d.likes})}
+  }).catch(function(){showError('Like failed')})
+}
 
 function updateMyMarker(loc){
   if(!map||!loc)return;
