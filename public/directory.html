@@ -17,12 +17,19 @@ function load(){
       html+='<div class="card"'+(hasPin?' onclick="goToMap('+u.lat+','+u.lng+')"':'')+'>';
       html+='<div class="avatar">'+(u.car_photo?'<img src="'+esc(u.car_photo)+'" onerror="this.style.display=\'none\';this.parentElement.textContent=\'🚗\'">':'🚗')+'</div>';
       html+='<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">'+esc(u.username)+'</div><div style="font-size:12px;color:#71717a">'+esc(u.car||'No car listed')+'</div>'+(u.instagram?'<div style="font-size:12px;color:#a5b4fc">@'+esc(u.instagram)+'</div>':'')+(u.blurb?'<div style="font-size:11px;color:#71717a">'+esc(u.blurb)+'</div>':'')+'</div>';
+      html+='<button class="btn-outline" style="padding:4px 10px;font-size:11px;margin-left:8px;flex-shrink:0" onclick="event.stopPropagation();follow(\''+u.username+'\')">+ Follow</button>';
       html+='</div>';
     }
     document.getElementById('list').innerHTML=html||'<p style="color:#52525b;text-align:center;padding:40px">No users found</p>';
   });
 }
 function goToMap(lat,lng){sessionStorage.setItem('dir_jump',JSON.stringify({lat:lat,lng:lng}));window.location.href='/'}
+function follow(username){
+  var cu=sessionStorage.getItem('carshow_user');if(!cu)return alert('Please log in first');
+  var user=JSON.parse(cu);
+  fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user.username,follow:username})})
+  .then(function(r){return r.json()}).then(function(){alert('Following '+username+'! You will be notified when they share their location.')});
+}
 document.getElementById('search').addEventListener('input',load);
 window.addEventListener('load',load);
 </script></body></html>
