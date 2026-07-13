@@ -536,9 +536,7 @@ function initHQControls(){
     this.parentElement.querySelector('span').textContent=this.checked?'On':'Off';
     if(this.checked&&navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentEvent.id})})},function(){},{enableHighAccuracy:true,timeout:5000})}
   });
-  $('#hqDirBtn').addEventListener('click',()=>{show($('#directoryModal'));loadDirectory()});
-  $('#closeDirBtn').addEventListener('click',()=>hide($('#directoryModal')));
-  $('#dirSearch').addEventListener('input',loadDirectory);
+  $('#hqDirBtn').addEventListener('click',()=>{window.location.href='/directory.html'});
 }
 function initVendorOfferings(){
   var un=currentUser.username;
@@ -688,7 +686,7 @@ function updateFollowBtnUI(id){
 }
 window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
-window.addEventListener('load',initLogin);
+window.addEventListener('load',function(){var dj=sessionStorage.getItem('dir_jump');if(dj){sessionStorage.removeItem('dir_jump');var loc=JSON.parse(dj);setTimeout(function(){if(map){map.setView([loc.lat,loc.lng],17)}else{show($('#app'));initMap();setTimeout(function(){map.setView([loc.lat,loc.lng],17)},500)}},1000)}initLogin()});
 
 
 function openPoker(){show($("#pokerModal"));loadPokerHand();$("#pokerHandTab").addEventListener("click",function(){$("#pokerHandView").show();$("#pokerBoardView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerBoardTab").attr("class","btn-outline btn-sm")});$("#pokerBoardTab").addEventListener("click",function(){$("#pokerBoardView").show();$("#pokerHandView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerHandTab").attr("class","btn-outline btn-sm");loadPokerBoard()})}

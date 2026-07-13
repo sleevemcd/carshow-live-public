@@ -1,0 +1,28 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Directory</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#09090b;color:#f4f4f5;padding:20px}h1{font-size:20px;margin-bottom:16px}button{font-family:inherit;cursor:pointer;border:none}.btn{padding:6px 12px;border-radius:8px;font-size:12px}.btn-outline{background:transparent;border:1px solid #27272a;color:#d4d4d8}.toolbar{display:flex;gap:8px;margin-bottom:16px;align-items:center}input{padding:6px 10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:12px;outline:none;width:200px}.card{cursor:pointer;padding:12px;border-bottom:1px solid #1f1f23;display:flex;gap:12px;align-items:center;transition:background .2s}.card:hover{background:#1f1f23}.avatar{width:48px;height:48px;border-radius:10px;background:#1f1f23;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px}.avatar img{width:100%;height:100%;object-fit:cover}</style></head><body>
+<h1>📋 Directory</h1>
+<div class="toolbar"><button class="btn btn-outline" onclick="history.back()">← Back</button><input type="text" id="search" placeholder="Search by name, car, or instagram..." /></div>
+<div id="list"></div>
+<script>
+var showRoles=['registered_user','vip','sponsor','vendor','super_user'];
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function load(){
+  var q=(document.getElementById('search').value||'').toLowerCase();
+  fetch('/api/dummy-users').then(function(r){return r.json()}).then(function(list){
+    var filtered=list.filter(function(u){return showRoles.indexOf(u.role)>=0});
+    if(q) filtered=filtered.filter(function(u){return (u.username||'').toLowerCase().indexOf(q)>=0||(u.car||'').toLowerCase().indexOf(q)>=0||(u.instagram||'').toLowerCase().indexOf(q)>=0});
+    var html='';
+    for(var i=0;i<filtered.length;i++){
+      var u=filtered[i];var hasPin=u.locationEnabled===true;
+      html+='<div class="card"'+(hasPin?' onclick="goToMap('+u.lat+','+u.lng+')"':'')+'>';
+      html+='<div class="avatar">'+(u.car_photo?'<img src="'+esc(u.car_photo)+'" onerror="this.style.display=\'none\';this.parentElement.textContent=\'🚗\'">':'🚗')+'</div>';
+      html+='<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">'+esc(u.username)+'</div><div style="font-size:12px;color:#71717a">'+esc(u.car||'No car listed')+'</div>'+(u.instagram?'<div style="font-size:12px;color:#a5b4fc">@'+esc(u.instagram)+'</div>':'')+(u.blurb?'<div style="font-size:11px;color:#71717a">'+esc(u.blurb)+'</div>':'')+'</div>';
+      html+='</div>';
+    }
+    document.getElementById('list').innerHTML=html||'<p style="color:#52525b;text-align:center;padding:40px">No users found</p>';
+  });
+}
+function goToMap(lat,lng){sessionStorage.setItem('dir_jump',JSON.stringify({lat:lat,lng:lng}));window.location.href='/'}
+document.getElementById('search').addEventListener('input',load);
+window.addEventListener('load',load);
+</script></body></html>
