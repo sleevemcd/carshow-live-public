@@ -7,7 +7,8 @@
 <h2 id="modalTitle">Import Route</h2>
 <label style="font-size:12px;color:#71717a;display:block;margin-bottom:4px">Route Name</label><input type="text" id="fName" placeholder="e.g. Alpine Loop Cruise" />
 <label style="font-size:12px;color:#71717a;display:block;margin-bottom:4px">Description</label><textarea id="fDesc" placeholder="Route details..."></textarea>
-<label style="font-size:12px;color:#71717a;display:block;margin-bottom:4px">GPX Points (lat,lng per line)</label><textarea id="fPoints" placeholder="40.5144,-111.4764&#10;40.5210,-111.4950&#10;40.5300,-111.5000" rows="6" style="font-family:monospace;font-size:12px"></textarea>
+<label style="font-size:12px;color:#71717a;display:block;margin-bottom:4px">Upload GPX File</label><input type="file" id="fFile" accept=".gpx" style="margin-bottom:10px;padding:8px;border:1px solid #27272a;border-radius:8px;background:#18181b;color:#d4d4d8;font-size:12px;width:100%" />
+<label style="font-size:12px;color:#71717a;display:block;margin-bottom:4px">OR paste coordinates (lat,lng per line)</label><textarea id="fPoints" placeholder="40.5144,-111.4764&#10;40.5210,-111.4950" rows="4" style="font-family:monospace;font-size:12px"></textarea>
 <div class="btns"><button class="btn btn-outline" onclick="closeForm()">Cancel</button><button class="btn btn-primary" onclick="saveRoute()">Save Route</button></div>
 </div></div>
 <script>
@@ -29,10 +30,20 @@ function closeForm(){document.getElementById('modal').classList.remove('open')}
 function saveRoute(){
   var name=document.getElementById('fName').value.trim();if(!name)return;
   var desc=document.getElementById('fDesc').value.trim();
+  var file=document.getElementById('fFile').files[0];
+  if(file){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      fetch('/api/gpx/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,description:desc,gpxData:e.target.result})})
+      .then(function(r){return r.json()}).then(function(){closeForm();load()});
+    };
+    reader.readAsText(file);
+    return;
+  }
   var raw=document.getElementById('fPoints').value.trim().split('\n');
   var points=[];
   for(var i=0;i<raw.length;i++){var p=raw[i].trim().split(',');if(p.length===2){var lat=parseFloat(p[0]),lng=parseFloat(p[1]);if(!isNaN(lat)&&!isNaN(lng))points.push([lat,lng])}}
-  if(!points.length)return alert('No valid points. Use lat,lng format per line.');
+  if(!points.length)return alert('No valid points');
   fetch('/api/gpx/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,description:desc,points:points})})
   .then(function(r){return r.json()}).then(function(){closeForm();load()});
 }

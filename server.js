@@ -508,7 +508,20 @@ if (require.main === module) {
 
 // GPX Track API
 app.get("/api/gpx", (req,res) => { res.json(gpxTracks); });
-app.post("/api/gpx/create", (req,res) => { var {name,description,points}=req.body; if(!name||!points||!points.length) return res.status(400).json({error:"name and points required"}); var t={id:"gpx-"+Date.now(),name,description:description||"",points:points,created:new Date().toISOString()}; gpxTracks.push(t); saveData("gpxTracks",gpxTracks); res.json(t); });
+app.post("/api/gpx/create", (req,res) => {
+  var {name,description,points,gpxData} = req.body;
+  if (!name) return res.status(400).json({error:"name required"});
+  if (!points || !points.length) {
+    if (gpxData) {
+      points = [];
+      var re = /<trkpt[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"/g;
+      var m; while((m = re.exec(gpxData)) !== null) { points.push([parseFloat(m[1]), parseFloat(m[2])]); }
+    }
+    if (!points.length) return res.status(400).json({error:"points required"});
+  }
+  var t={id:"gpx-"+Date.now(),name,description:description||"",points:points,created:new Date().toISOString()};
+  gpxTracks.push(t); saveData("gpxTracks",gpxTracks); res.json(t);
+});
 app.delete("/api/gpx/:id", (req,res) => { var i=gpxTracks.findIndex(t=>t.id===req.params.id); if(i>=0)gpxTracks.splice(i,1); saveData("gpxTracks",gpxTracks); res.json({success:true}); });
 app.get("/api/gpx/progress/:username", (req,res) => { res.json(gpxProgress[req.params.username]||{}); });
 app.post("/api/gpx/progress", (req,res) => { var {username,trackId,progress,completed,pointIndex}=req.body; if(!username||!trackId) return res.status(400).json({error:"required"}); if(!gpxProgress[username])gpxProgress[username]={}; gpxProgress[username][trackId]={progress:progress||0,completed:completed||false,pointIndex:pointIndex||0,updated:Date.now()}; saveData("gpxProgress",gpxProgress); res.json(gpxProgress[username]); });
