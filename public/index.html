@@ -285,16 +285,13 @@ function initMap(){
     if(map){try{map.remove()}catch(e){}map=null}
     $('#eventId').textContent=ev.name;$('#eventLoc').textContent=ev.location_name;
     document.title=ev.name+' — CarShow';
-    // Ensure map container has size
-    var mc=$('#map');if(mc)mc.style.height='100%';
-    setTimeout(function(){
     map=L.map('map',{zoomControl:false,attributionControl:false}).setView([ev.lat,ev.lng],16);
     var hour=new Date().getHours();
     var tileUrl=hour>=6&&hour<18?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     L.tileLayer(tileUrl,{maxZoom:19}).addTo(map);
     L.marker([ev.lat,ev.lng],{icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6)"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
     setupHeatmap();loadSpots();setupLocation();setupPolling();initControls();loadEventMarkers();pollUsers();pollVendors();pollSpots();
-    }, 100);
+    setTimeout(function(){if(map)map.invalidateSize()}, 200);
   }catch(e){showError('Map error: '+e.message)}
 }
 
