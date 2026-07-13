@@ -404,7 +404,7 @@ function pollUsers(){
       if(u.lat&&u.lng&&u.heat) heatPoints.push([u.lat,u.lng,u.heat]);
       if(showRoles.includes(u.role)){
         // Respect showPin flag
-        if(u.showPin===false){heatPoints.push([u.lat,u.lng,u.heat]);continue;} // Only heat, no pin
+        if(u.showPin===false){heatPoints.push([u.lat,u.lng,u.heat]);return;} // Only heat, no pin
         var c=rc[u.role]||'#6366f1';
         var isVip=u.role==='vip';
         var label=esc(u.username);
