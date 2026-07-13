@@ -72,9 +72,9 @@ app.get('/api/sync', async (req, res) => {
 // Dummy user management API
 app.get('/api/dummy-users', (req, res) => { res.json(demoUsers); });
 app.post('/api/dummy-users', (req, res) => {
-  var { username, role, lat, lng, event_id, blurb, offering, locationEnabled, car, instagram, car_photo, email, display } = req.body;
+  var { username, role, lat, lng, event_id, blurb, offering, locationEnabled, car, instagram, car_photo, email, display, showPin } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
-  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1', blurb: blurb || '', offering: offering || '', locationEnabled: locationEnabled !== false, car: car || '', instagram: instagram || '', car_photo: car_photo || '', email: email || '', display: display || '' });
+  demoUsers.push({ username, role: role || 'attendee', lat: lat || 40.5144, lng: lng || -111.4764, event_id: event_id || 'demo-event-1', blurb: blurb || '', offering: offering || '', locationEnabled: locationEnabled !== false, car: car || '', instagram: instagram || '', car_photo: car_photo || '', email: email || '', display: display || '', showPin: showPin !== false });
   res.json(demoUsers);
 });
 app.put('/api/dummy-users/:username', (req, res) => {
@@ -496,7 +496,8 @@ app.get('/api/users/:eventId', (req, res) => {
       var session = users[u.username];
       var lat = (session && session.lat) ? session.lat : u.lat;
       var lng = (session && session.lng) ? session.lng : u.lng;
-      return { username: u.username, lat: lat, lng: lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', car: u.car || '', instagram: u.instagram || '', car_photo: u.car_photo || '', email: u.email || '', photo: u.photo || '', business_name: v ? v.business_name : '', description: v ? v.description : '', locationEnabled: u.locationEnabled !== false };
+      var showPin = u.showPin !== false || (u.offering && u.offering.length > 0);
+      return { username: u.username, lat: lat, lng: lng, role: u.role, heat: HEAT_VALUES[u.role] || 1, blurb: u.blurb || '', offering: u.offering || '', car: u.car || '', instagram: u.instagram || '', car_photo: u.car_photo || '', email: u.email || '', photo: u.photo || '', business_name: v ? v.business_name : '', description: v ? v.description : '', showPin: showPin, locationEnabled: u.locationEnabled !== false };
     });
   res.json([...real, ...demo]);
 });
