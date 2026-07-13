@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>CarShow Live — Project Handoff</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#09090b;color:#f4f4f5;padding:40px;max-width:800px;margin:0 auto;line-height:1.6}h1{font-size:28px;margin-bottom:4px;color:#a5b4fc}h2{font-size:18px;margin-top:32px;margin-bottom:12px;color:#d4d4d8;border-bottom:1px solid #27272a;padding-bottom:8px}ul{margin-left:20px;margin-bottom:16px}li{margin-bottom:6px;color:#a1a1aa}.done{color:#22c55e}.pending{color:#f59e0b}code{background:#18181b;padding:2px 6px;border-radius:4px;font-size:13px;color:#a5b4fc}.badge{padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px}.badge-g{background:rgba(34,197,94,0.15);color:#22c55e}.badge-y{background:rgba(245,158,11,0.15);color:#f59e0b}a{color:#a5b4fc}</style></head><body>
+<h1>🚗 CarShow Live</h1>
+<p>Real-time interactive map for car show events — vendors, sponsors, VIPs, heat map, poker run, and more.</p>
+
+<h2>Tech Stack</h2>
+<ul>
+<li>Express.js backend (single-file server)</li>
+<li>Leaflet.js + OpenStreetMap (free tiles, no API key)</li>
+<li>In-memory state with JSON file persistence</li>
+<li>Single HTML file frontend with vanilla JS (no framework)</li>
+<li>Docker deployment on NAS</li>
+</ul>
+
+<h2>Features <span class="badge badge-g">90% Complete</span></h2>
+<ul>
+<li class="done">✅ Role-based dashboards (Admin, Organizer, Vendor, Sponsor, VIP, Registered User, User)</li>
+<li class="done">✅ Interactive map with heat signatures, day/night tiles</li>
+<li class="done">✅ Vendor/Sponsor/VIP pins with profile photos and offering icons</li>
+<li class="done">✅ Pin dropping (Spot, Car Spot, Bomb Food) with countdown timers</li>
+<li class="done">✅ Pin likes (one per user) with ❤️ count</li>
+<li class="done">✅ User management system with mini-map location picker</li>
+<li class="done">✅ Pin management system with CRUD</li>
+<li class="done">✅ Community directory with search, car photos, Instagram</li>
+<li class="done">✅ Virtual poker run — collect cards from nearby vendors, leaderboard, hand evaluation</li>
+<li class="done">✅ Car brand hot spot search — type "BMW" to find highest concentration</li>
+<li class="done">✅ Google Calendar ICS sync with type/parent parsing</li>
+<li class="done">✅ Real-time location sharing with GPS override of admin-set coordinates</li>
+<li class="done">✅ Follow/unfollow users with notification system</li>
+<li class="done">✅ Registration and login system with session persistence</li>
+<li class="done">✅ Data persistence via JSON files on NAS volume</li>
+<li class="done">✅ Day/night map tiles based on sun position at event coordinates</li>
+<li class="done">✅ Cloudflare tunnel for public access</li>
+<li class="done">✅ Event HQ dashboard with countdown timer and schedule</li>
+<li class="done">✅ Super User role (heat score 10, labeled as Sponsor)</li>
+<li class="pending">🔲 Public App Store deployment (needs Capacitor wrapper)</li>
+<li class="pending">🔲 Email/password real auth (MVP uses username check)</li>
+<li class="pending">🔲 Mobile UI polish</li>
+</ul>
+
+<h2>Deployment</h2>
+<ul>
+<li><b>Local:</b> Docker Compose on UGREEN NAS — <code>http://192.168.1.44:3000</code></li>
+<li><b>Public:</b> Cloudflare tunnel via <code>cloudflared</code> in Docker start script</li>
+<li><b>Data:</b> Volume mount <code>/volume1/docker/1/carshow-data:/data</code></li>
+</ul>
+
+<h2>Repo</h2>
+<ul>
+<li><b>Private:</b> <code>github.com/sleevemcd/carshow-live</code></li>
+<li><b>Public (Docker):</b> <code>github.com/sleevemcd/carshow-live-public</code></li>
+</ul>
+
+<h2>Key Files</h2>
+<ul>
+<li><code>server.js</code> — Express API (350 lines)</li>
+<li><code>public/index.html</code> — Main SPA (700 lines, inline JS)</li>
+<li><code>public/users.html</code> — User management</li>
+<li><code>public/pins.html</code> — Pin management</li>
+<li><code>public/directory.html</code> — Community directory</li>
+<li><code>public/login.html</code> — Login page</li>
+<li><code>public/js/vendor.js</code> — Vendor dashboard logic</li>
+<li><code>Dockerfile</code>, <code>docker-compose.yml</code> — Docker setup</li>
+</ul>
+
+<h2>Login</h2>
+<ul>
+<li><b>Admin:</b> Type <code>sleve</code> in username field</li>
+<li><b>Demo users:</b> Type any dummy username (bmwfanatic, porscheguy, turbokings, etc.)</li>
+<li><b>Register:</b> Click "Create Account" — email + username + password + optional event code</li>
+</ul>
+
+</body></html>

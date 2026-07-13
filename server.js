@@ -48,7 +48,7 @@ const spots = loadData("spots", [
   { id: "spot-3", event_id: "demo-event-1", label: "Mountain View Photo Spot", description: "Epic Wasatch backdrop", lat: 40.5155, lng: -111.4780, spot_type: "spot", username: "photogear", likes: 8, expires_at: new Date(Date.now() + 86400000).toISOString() },
 ])
 
-function saveAll(){ saveData('events',events);saveData('demoUsers',demoUsers);saveData('spots',spots);saveData('vendors',vendors);saveData('notifications',notifications);saveData('pokerHands',pokerHands);saveData('accounts',accounts); }
+function saveAll(){ saveData('events',events);saveData('demoUsers',demoUsers);saveData('spots',spots);saveData('vendors',vendors);saveData('notifications',notifications);saveData('pokerHands',pokerHands);saveData('accounts',accounts);saveData('gpxTracks',gpxTracks);saveData('gpxProgress',gpxProgress); }
 app.use((req, res, next) => { res.on('finish', () => { if (['POST','PUT','DELETE'].includes(req.method)) saveAll(); }); next(); });
 setTimeout(saveAll,5000);
 app.get('/api/status', (req, res) => {
@@ -184,6 +184,8 @@ app.post("/api/poker/reset", (req,res) => {
 const follows = {}; // username -> [vendor_username]
 const accounts = loadData('accounts', {}); // email -> { email, password, username, role }
 const spotLikes = loadData('spotLikes', {}); // spotId -> [usernames]
+const gpxTracks = loadData('gpxTracks', []);
+const gpxProgress = loadData('gpxProgress', {}); // username -> { trackId: { progress, completed } }
 const USERS_EXPIRY_MS = 60 * 1000;
 
 // Account registration & login
@@ -503,6 +505,13 @@ app.get('/api/users/:eventId', (req, res) => {
 });
 
 if (require.main === module) {
+
+// GPX Track API
+app.get("/api/gpx", (req,res) => { res.json(gpxTracks); });
+app.post("/api/gpx/create", (req,res) => { var {name,description,points}=req.body; if(!name||!points||!points.length) return res.status(400).json({error:"name and points required"}); var t={id:"gpx-"+Date.now(),name,description:description||"",points:points,created:new Date().toISOString()}; gpxTracks.push(t); saveData("gpxTracks",gpxTracks); res.json(t); });
+app.delete("/api/gpx/:id", (req,res) => { var i=gpxTracks.findIndex(t=>t.id===req.params.id); if(i>=0)gpxTracks.splice(i,1); saveData("gpxTracks",gpxTracks); res.json({success:true}); });
+app.get("/api/gpx/progress/:username", (req,res) => { res.json(gpxProgress[req.params.username]||{}); });
+app.post("/api/gpx/progress", (req,res) => { var {username,trackId,progress,completed,pointIndex}=req.body; if(!username||!trackId) return res.status(400).json({error:"required"}); if(!gpxProgress[username])gpxProgress[username]={}; gpxProgress[username][trackId]={progress:progress||0,completed:completed||false,pointIndex:pointIndex||0,updated:Date.now()}; saveData("gpxProgress",gpxProgress); res.json(gpxProgress[username]); });
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => console.log(`CarShow Live running on http://localhost:${PORT}`));
 }
