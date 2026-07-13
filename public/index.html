@@ -245,7 +245,7 @@ function doLogin(email,role){
     hide($('#loginScreen'));
     if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
     else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
-    else if(currentUser.role==='vendor'||currentUser.role==='sponsor'||currentUser.role==='vip'){show($('#dashboardView'));loadVendorDashboard();initVendorControls()}
+    else if(currentUser.role==='vendor'||currentUser.role==='sponsor'||currentUser.role==='vip'){show($('#eventHQ'));loadEventHQ();initHQControls();initVendorOfferings()}
     else{show($('#eventHQ'));loadEventHQ();initHQControls()}
   }).catch(()=>{$('#loginError').textContent='Login failed'});
 }
@@ -534,6 +534,34 @@ function initHQControls(){
   $('#hqDirBtn').addEventListener('click',()=>{show($('#directoryModal'));loadDirectory()});
   $('#closeDirBtn').addEventListener('click',()=>hide($('#directoryModal')));
   $('#dirSearch').addEventListener('input',loadDirectory);
+}
+function initVendorOfferings(){
+  var un=currentUser.username;
+  fetch('/api/dummy-users').then(r=>r.json()).then(list=>{
+    var me=list.find(x=>x.username===un);if(!me)return;
+    var off=me.offering||'';
+    var offs=['swag','giveaway','merch','poker','photo'];
+    var labels={swag:'😎 Swag',giveaway:'🎁 Giveaway',merch:'👕 Merch',poker:'🃏 Poker',photo:'📷 Photo'};
+    var html='<div style="margin-bottom:16px;padding:12px;border-radius:12px;border:1px solid #27272a;background:#18181b"><h3 style="font-size:12px;color:#71717a;margin-bottom:8px;text-transform:uppercase">Your Offerings</h3><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+    for(var i=0;i<offs.length;i++){
+      var o=offs[i];var active=off.split(',').indexOf(o)>=0;
+      html+='<button onclick="toggleHQOffer(\''+o+'\')" style="padding:6px 12px;border-radius:8px;font-size:12px;border:1px solid '+(active?'#22c55e':'#52525b')+';background:'+(active?'rgba(34,197,94,0.15)':'transparent')+';color:'+(active?'#22c55e':'#a1a1aa')+';cursor:pointer">'+labels[o]+'</button>';
+    }
+    html+='</div></div>';
+    var hq=document.getElementById('hqMapBtn'); if(hq){var d=document.createElement('div');d.innerHTML=html;hq.parentNode.insertBefore(d,hq)}
+  });
+}
+function toggleHQOffer(offer){
+  var un=currentUser.username;
+  fetch('/api/dummy-users').then(r=>r.json()).then(list=>{
+    var me=list.find(x=>x.username===un);if(!me)return;
+    var cur=(me.offering||'').split(',').filter(x=>x);
+    var idx=cur.indexOf(offer);if(idx>=0)cur.splice(idx,1);else cur.push(offer);
+    fetch('/api/dummy-users/'+un,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:cur.join(',')})}).then(function(){
+      var hq=document.getElementById('hqMapBtn');if(hq){var d=hq.previousElementSibling;if(d&&d.tagName==='DIV')hq.parentNode.removeChild(d)}
+      initVendorOfferings();
+    });
+  });
 }
 function loadDirectory(){
   var q=($('#dirSearch').value||'').toLowerCase().trim();
