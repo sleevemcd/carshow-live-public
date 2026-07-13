@@ -283,9 +283,12 @@ function initMap(){
     document.title=ev.name+' — CarShow';
     map=L.map('map',{zoomControl:false,attributionControl:false}).setView([ev.lat,ev.lng],16);
     var now=new Date();var start=new Date(now.getFullYear(),0,0);var doy=Math.floor((now-start)/86400000);
-    var lat=ev.lat;var ha=Math.sin((doy-79)*0.0172)*0.409;var cosZenith=Math.cos(lat*0.01745)*Math.cos(ha)+Math.sin(lat*0.01745)*Math.sin(ha);
-    var daylight=cosZenith>-0.014;
-    var tileUrl=daylight?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    var lat=ev.lat;var ha=Math.sin((doy-79)*0.0172)*0.409;var cosZen=Math.cos(lat*0.01745)*Math.cos(ha)+Math.sin(lat*0.01745)*Math.sin(ha);
+    var maxDaylight=cosZen>-0.014?14:10; // summer ~14h daylight, winter ~10h
+    var utcH=now.getUTCHours()+now.getTimezoneOffset()/-60;
+    var sunrise=12-maxDaylight/2;var sunset=12+maxDaylight/2;
+    var light=utcH>sunrise&&utcH<sunset;
+    var tileUrl=light?'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     L.tileLayer(tileUrl,{maxZoom:19}).addTo(map);
     L.marker([ev.lat,ev.lng],{icon:L.divIcon({className:'',html:'<div style="width:24px;height:24px;border-radius:50%;background:#4f46e5;border:3px solid #818cf8;box-shadow:0 0 16px rgba(99,102,241,0.6)"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
     setupHeatmap();loadSpots();setupLocation();setupPolling();initControls();loadEventMarkers();pollUsers();pollVendors();pollSpots();
