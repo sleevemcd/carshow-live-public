@@ -276,7 +276,7 @@ function showError(msg){
   document.getElementById('errCloseBtn').addEventListener('click',function(){el.remove()});
 }
 
-function goToMap(){show($('#app'));requestAnimationFrame(function(){requestAnimationFrame(function(){initMap()})})}
+function goToMap(){show($('#app'));setTimeout(function(){var m=$('#map');if(m){m.style.width='100vw';m.style.height='100vh'}initMap()},300)}
 function initMap(){
   try{
     var ev=currentEvent;
