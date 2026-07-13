@@ -242,6 +242,7 @@ function doLogin(email,role){
     if(data.error){$('#loginError').textContent=data.error;return}
     currentUser={username:data.username,role:data.role,event_id:data.event.id};
     currentEvent=data.event;
+    sessionStorage.setItem('carshow_user',JSON.stringify(currentUser));
     hide($('#loginScreen'));
     if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
     else if(currentUser.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}
@@ -686,7 +687,11 @@ function updateFollowBtnUI(id){
 }
 window.dismissNotif=dismissNotif;
 window.addEventListener('beforeunload',()=>{if(currentUser)navigator.sendBeacon('/api/logout',JSON.stringify({username:currentUser.username}));pollingTimers.forEach(clearInterval)});
-window.addEventListener('load',function(){var dj=sessionStorage.getItem('dir_jump');if(dj){sessionStorage.removeItem('dir_jump');var loc=JSON.parse(dj);setTimeout(function(){if(map){map.setView([loc.lat,loc.lng],17)}else{show($('#app'));initMap();setTimeout(function(){map.setView([loc.lat,loc.lng],17)},500)}},1000)}initLogin()});
+window.addEventListener('load',function(){
+  if(!currentUser){try{var saved=sessionStorage.getItem('carshow_user');if(saved){currentUser=JSON.parse(saved);currentEvent={id:currentUser.event_id||'demo-event-1',name:'Wasatch Euro Fest',lat:40.5144,lng:-111.4764,location_name:'Midway, Utah',radius_meters:2000,start_date:'2026-07-10T00:00:00Z'}}}}catch(e){}}
+  var dj=sessionStorage.getItem('dir_jump');if(dj){sessionStorage.removeItem('dir_jump');var loc;try{loc=JSON.parse(dj)}catch(e){}if(loc){show($('#app'));initMap();setTimeout(function(){if(map)map.setView([loc.lat,loc.lng],17)},500);return}}
+  if(currentUser&&currentUser.username){var u=currentUser;hide($('#loginScreen'));if(u.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}else if(u.role==='organizer'){show($('#dashboardView'));loadOrganizerEvents();initOrganizerControls()}else if(u.role==='vendor'||u.role==='sponsor'||u.role==='vip'){show($('#eventHQ'));loadEventHQ();initHQControls();initVendorOfferings()}else{show($('#eventHQ'));loadEventHQ();initHQControls()}return}
+  initLogin()});
 
 
 function openPoker(){show($("#pokerModal"));loadPokerHand();$("#pokerHandTab").addEventListener("click",function(){$("#pokerHandView").show();$("#pokerBoardView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerBoardTab").attr("class","btn-outline btn-sm")});$("#pokerBoardTab").addEventListener("click",function(){$("#pokerBoardView").show();$("#pokerHandView").hide();$(this).attr("class","btn-primary btn-sm");$("#pokerHandTab").attr("class","btn-outline btn-sm");loadPokerBoard()})}
