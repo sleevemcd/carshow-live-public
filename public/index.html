@@ -276,6 +276,7 @@ function showError(msg){
   document.getElementById('errCloseBtn').addEventListener('click',function(){el.remove()});
 }
 
+function goToMap(){show($('#app'));requestAnimationFrame(function(){requestAnimationFrame(function(){initMap()})})}
 function initMap(){
   try{
     var ev=currentEvent;
@@ -449,7 +450,7 @@ function loadDashboardEvents(){fetch('/api/events').then(r=>r.json()).then(list=
 window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>openEventModal(e));
 window.deleteEventById=id=>{if(confirm('Delete?'))fetch('/api/events/'+id,{method:'DELETE'}).then(()=>{loadDashboardEvents();loadAdminPanel()})};
 window.switchToEvent=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;if(map)try{map.remove()}catch(ex){};map=null;initMap();hide($('#adminPanel'))});
-window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#app'));initMap()});
+window.switchToEventFromDash=id=>fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));goToMap()});
 function toggleAdmin(){var p=$('#adminPanel');p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';if(p.style.display==='block')loadAdminPanel()}
 function loadOrganizerEvents(){fetch('/api/events').then(r=>r.json()).then(list=>{var mine=list.filter(e=>e.organizer_id===currentUser.username||e.organizer_id==='google-calendar');$('#dashEventCount').textContent=mine.length+' events';$('#dashEventList').innerHTML=mine.map(e=>'<div class="event-item"><h3>'+esc(e.name)+(e.is_active?'':' <span style="color:#f87171;font-size:11px">(inactive)</span>')+'</h3><div class="meta">'+esc(e.location_name)+' · code: '+esc(e.access_code||'')+'</div><div class="actions"><button class="btn-outline btn-sm" onclick="switchToEventMap(\''+e.id+'\')">Map</button><button class="btn-outline btn-sm" onclick="openEventModalById(\''+e.id+'\')">Edit</button><button class="btn-danger btn-sm" onclick="deleteEventById(\''+e.id+'\')">Delete</button></div></div>').join('')||'<p style="padding:16px;color:#71717a">No events</p>'})}
 function initOrganizerControls(){$('#dashRole').textContent='Organizer: '+currentUser.username;$('#dashLogoutBtn').addEventListener('click',dashLogout);$('#dashNotifBtn').addEventListener('click',function(){show($('#notifModal'));loadNotifs()});$('#dashNewEventBtn').addEventListener('click',openEventModal);$('#dashAddVendorBtn').addEventListener('click',openVendorModal)}
@@ -529,7 +530,7 @@ function updateCountdown(){
 function initHQControls(){
   $('#hqLogoutBtn').addEventListener('click',dashLogout);
   $('#hqNotifBtn').addEventListener('click',()=>{show($('#notifModal'));loadNotifs()});
-  $('#hqMapBtn').addEventListener('click',()=>{hide($('#eventHQ'));show($('#app'));initMap()});
+  $('#hqMapBtn').addEventListener('click',()=>{hide($('#eventHQ'));goToMap()});
   $('#hqLocationToggle').checked=false;
   $('#hqLocationToggle').addEventListener('change',function(){
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,enabled:this.checked})});
