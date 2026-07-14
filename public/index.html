@@ -328,8 +328,11 @@ function initControls(){
     },()=>{useDefaultLocation();map.setView([currentEvent.lat,currentEvent.lng],15)},{enableHighAccuracy:true,timeout:8000,maximumAge:120000})
   });
   $('#locationToggle').addEventListener('change',()=>{
+    var on=$('#locationToggle').checked;
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
-    if($('#locationToggle').checked){if(!locationWatchId)setupLocation()}else{if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(userMarkers._me){map.removeLayer(userMarkers._me);delete userMarkers._me}myLocation=null}
+    // Sync HQ toggle
+    var ht=$('#hqLocationToggle');if(ht)ht.checked=on;var hs=ht?ht.parentElement.querySelector('span'):null;if(hs)hs.textContent=on?'On':'Off';
+    if(on){if(!locationWatchId)setupLocation()}else{if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(userMarkers._me){map.removeLayer(userMarkers._me);delete userMarkers._me}myLocation=null}
   });
   $('#closeVendorPopup').addEventListener('click',()=>hide($('#vendorPopup')));
   $('#vpFollowBtn').addEventListener('click',function(){
@@ -551,9 +554,13 @@ function initHQControls(){
   $('#hqMapBtn').addEventListener('click',()=>{hide($('#eventHQ'));show($('#app'));initMap()});
   $('#hqLocationToggle').checked=false;
   $('#hqLocationToggle').addEventListener('change',function(){
-    fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,enabled:this.checked})});
-    this.parentElement.querySelector('span').textContent=this.checked?'On':'Off';
-    if(this.checked&&navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentEvent.id})})},function(){},{enableHighAccuracy:true,timeout:5000})}
+    var on=this.checked;
+    fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,enabled:on})});
+    this.parentElement.querySelector('span').textContent=on?'On':'Off';
+    // Sync map toggle
+    var mt=$('#locationToggle');if(mt)mt.checked=on;
+    if(on&&navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentEvent.id})})},function(){},{enableHighAccuracy:true,timeout:5000})}
+    if(!on){if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(userMarkers._me){map.removeLayer(userMarkers._me);delete userMarkers._me}myLocation=null}
   });
   $('#hqDirBtn').addEventListener('click',()=>{window.location.href='/directory.html'});
 }
