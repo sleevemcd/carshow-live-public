@@ -36,7 +36,7 @@ function saveRoute(){
     var reader=new FileReader();
     reader.onload=function(e){
       fetch('/api/gpx/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,description:desc,gpxData:e.target.result})})
-      .then(function(r){return r.json()}).then(function(){closeForm();load()});
+      .then(function(r){if(!r.ok)return r.json().then(function(d){alert('Error: '+(d.error||'Parse failed'))});return r.json()}).then(function(){closeForm();load()});
     };
     reader.readAsText(file);
     return;
@@ -46,7 +46,7 @@ function saveRoute(){
   for(var i=0;i<raw.length;i++){var p=raw[i].trim().split(',');if(p.length===2){var lat=parseFloat(p[0]),lng=parseFloat(p[1]);if(!isNaN(lat)&&!isNaN(lng))points.push([lat,lng])}}
   if(!points.length)return alert('No valid points');
   fetch('/api/gpx/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,description:desc,points:points})})
-  .then(function(r){return r.json()}).then(function(){closeForm();load()});
+  .then(function(r){if(!r.ok)return r.json().then(function(d){alert('Error: '+(d.error||'Server error'))});return r.json()}).then(function(){closeForm();load()});
 }
 function del(id){if(confirm('Delete?')){fetch('/api/gpx/'+id,{method:'DELETE'}).then(function(){load()})}}
 function loadLeaderboard(){
