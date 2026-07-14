@@ -517,8 +517,14 @@ app.post("/api/gpx/create", (req,res) => {
   if (!points || !points.length) {
     if (gpxData) {
       points = [];
-      var re = /<trkpt[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"/g;
-      var m; while((m = re.exec(gpxData)) !== null) { points.push([parseFloat(m[1]), parseFloat(m[2])]); }
+      var reLat = /lat="([^"]+)"/g;
+      var reLon = /lon="([^"]+)"/g;
+      var pts = gpxData.match(/<trkpt[^>]*>/g) || [];
+      pts.forEach(function(pt){
+        var lm = reLat.exec(pt); var lnm = reLon.exec(pt);
+        if (lm && lnm) points.push([parseFloat(lm[1]), parseFloat(lnm[1])]);
+        reLat.lastIndex = 0; reLon.lastIndex = 0;
+      });
     }
     if (!points.length) return res.status(400).json({error:"points required"});
   }
