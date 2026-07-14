@@ -529,6 +529,7 @@ function loadEventHQ(){
     if(first) currentEvent=first;
     $('#hqCountdownLabel').textContent=(currentEvent?.name||'Event')+' starts in';
     $('#hqMapImg').src='https://staticmap.openstreetmap.de/staticmap.php?center='+currentEvent.lat+','+currentEvent.lng+'&zoom=14&size=500x180&maptype=mapnik';
+    $('#hqMapImg').onerror=function(){this.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="500" height="180"><rect fill="%23181b24" width="500" height="180"/><text fill="%2371717a" font-size="20" text-anchor="middle" x="250" y="90" font-family="sans-serif">🗺 Tap to view live map</text></svg>'};
     updateCountdown();
     $('#hqSchedule').innerHTML=upcoming.map(e=>'<div style="padding:12px;border-radius:10px;background:#18181b;border:1px solid #27272a;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="jumpToEvent(\''+e.id+'\')"><div><div style="font-size:14px;font-weight:600">'+esc(e.name)+'</div><div style="font-size:12px;color:#71717a">'+esc(e.location_name)+'</div></div><div style="font-size:12px;color:#a5b4fc;white-space:nowrap">'+new Date(e.start_date).toLocaleDateString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div></div>').join('')||'<div style="padding:12px;color:#52525b;text-align:center">No upcoming events</div>';
   });
