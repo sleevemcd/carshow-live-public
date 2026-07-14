@@ -25,10 +25,11 @@ function load(){
 }
 function goToMap(lat,lng){sessionStorage.setItem('dir_jump',JSON.stringify({lat:lat,lng:lng}));window.location.href='/'}
 function follow(username){
-  var cu=sessionStorage.getItem('carshow_user');if(!cu)return alert('Please log in first');
-  var user=JSON.parse(cu);
+  var cu=sessionStorage.getItem('carshow_user');if(!cu){alert('Session expired. Please log in first.');return}
+  try{var user=JSON.parse(cu)}catch(e){alert('Session error. Please log in again.');return}
   fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user.username,follow:username})})
-  .then(function(r){return r.json()}).then(function(){alert('Following '+username+'! You will be notified when they share their location.')});
+  .then(function(r){return r.json()}).then(function(){alert('Now following '+username+'!')})
+  .catch(function(){alert('Follow failed. Try again.')});
 }
 document.getElementById('search').addEventListener('input',load);
 window.addEventListener('load',load);
