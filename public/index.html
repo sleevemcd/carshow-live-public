@@ -662,7 +662,7 @@ function showInfoPopup(){
   show($('#vendorPopup'));
   updateFollowBtn();
 }
-window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{map.setView([e.lat,e.lng],16);$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name})};
+window.panToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{map.setView([e.lat,e.lng],16);$('#eventId').textContent=e.name;$('#eventLoc').textContent=e.location_name;var marker=L.circleMarker([e.lat,e.lng],{radius:20,color:'#6366f1',fillColor:'#6366f1',fillOpacity:0.3,weight:3}).addTo(map);setTimeout(function(){map.removeLayer(marker)},2000)})};
 window.jumpToEvent=function(id){fetch('/api/events/'+id).then(r=>r.json()).then(e=>{currentEvent=e;hide($('#dashboardView'));show($('#eventHQ'));loadEventHQ();initHQControls()})}
 function loadEventMarkers(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
