@@ -458,6 +458,8 @@ function pollSpots(){if(!currentEvent)return;fetch('/api/spots/'+getEventId()).t
 
 function openSpotModal(){
   show($('#spotModal'));$('#spotLabel').value='';$('#spotDesc').value='';
+var evMap,evMarker;
+function initEvMap(lat,lng){var el=document.getElementById("evPickMap");if(!el||typeof L=="undefined")return;if(el._map)el._map.remove();el.innerHTML="";var m=L.map(el,{zoomControl:false,attributionControl:false}).setView([lat,lng],14);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(m);var mk=L.marker([lat,lng],{draggable:true}).addTo(m);mk.on("dragend",function(){var p=mk.getLatLng();document.getElementById("evLat").value=p.lat.toFixed(6);document.getElementById("evLng").value=p.lng.toFixed(6)});m.on("click",function(e){mk.setLatLng(e.latlng);document.getElementById("evLat").value=e.latlng.lat.toFixed(6);document.getElementById("evLng").value=e.latlng.lng.toFixed(6)});el._map=m}
 }
 function saveSpot(){
   var label=$('#spotLabel').value.trim();
