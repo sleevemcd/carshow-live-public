@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>My Profile</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#09090b;color:#f4f4f5;padding:20px;max-width:500px;margin:0 auto}h1{font-size:20px;margin-bottom:16px}button{font-family:inherit;cursor:pointer;border:none}.btn{padding:8px 16px;border-radius:8px;font-size:13px}.btn-primary{background:#4f46e5;color:#fff;width:100%}.btn-outline{background:transparent;border:1px solid #27272a;color:#d4d4d8}.btn-outline:hover{border-color:#6366f1}.btn-sm{font-size:11px;padding:4px 10px}.toolbar{display:flex;gap:8px;margin-bottom:20px}label{display:block;font-size:12px;color:#71717a;margin-bottom:4px}input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #27272a;background:#18181b;color:#f4f4f5;font-size:14px;margin-bottom:12px;outline:none;font-family:inherit}textarea{resize:vertical;min-height:60px}.row{display:flex;gap:8px}.row>*{flex:1}.card{padding:16px;border-radius:12px;border:1px solid #27272a;background:#18181b;margin-bottom:16px}.card h2{font-size:14px;margin-bottom:12px;color:#71717a;text-transform:uppercase;letter-spacing:1px}.checks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.checks label{font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:4px}.success{color:#22c55e;font-size:13px;text-align:center;margin-top:8px}.error{color:#f87171;font-size:13px;text-align:center;margin-top:8px}a{color:#a5b4fc}</style></head><body>
+<h1>👤 My Profile</h1>
+<div class="toolbar"><button class="btn btn-outline btn-sm" onclick="history.back()">← Back</button><button class="btn btn-outline btn-sm" id="logoutBtn">Logout</button></div>
+<div id="msg" class="success"></div>
+<form id="profileForm" style="display:none">
+<div class="card"><h2>Basic Info</h2>
+<label>Username</label><input type="text" id="pUser" disabled />
+<label>Display Name</label><input type="text" id="pDisplay" placeholder="How others see you" />
+<label>Role</label><input type="text" id="pRole" disabled />
+<label>Email</label><input type="email" id="pEmail" placeholder="user@example.com" />
+<label>Instagram</label><input type="text" id="pInsta" placeholder="@username" />
+<label>Blurb</label><textarea id="pBlurb" placeholder="Short bio shown on your pin"></textarea>
+</div>
+<div class="card"><h2>Car</h2>
+<label>Car Model</label><input type="text" id="pCar" placeholder="e.g. 2020 BMW M3 Competition" />
+<label>Car Photo</label><div class="row"><input type="file" id="pPhotoFile" accept="image/*" onchange="handlePhoto()" /><input type="text" id="pPhoto" placeholder="or paste URL" /></div>
+</div>
+<div class="card" id="offeringsCard"><h2>Offerings</h2>
+<div class="checks" id="pOfferChecks">
+<label><input type="checkbox" class="pOffer" value="swag" />😎 Swag</label>
+<label><input type="checkbox" class="pOffer" value="giveaway" />🎁 Giveaway</label>
+<label><input type="checkbox" class="pOffer" value="merch" />👕 Merch</label>
+<label><input type="checkbox" class="pOffer" value="poker" />🃏 Poker</label>
+<label><input type="checkbox" class="pOffer" value="photo" />📷 Photo</label>
+</div>
+</div>
+<div class="card"><h2>Password</h2>
+<label>New Password</label><input type="password" id="pPass" placeholder="Leave blank to keep current" />
+<label>Confirm Password</label><input type="password" id="pPassConfirm" placeholder="Re-enter new password" />
+</div>
+<button type="submit" class="btn btn-primary">Save Changes</button>
+<div id="formMsg" class="success"></div>
+</form>
+<script>
+var currentUser=null;
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function load(){
+  var cu=sessionStorage.getItem('carshow_user');if(!cu){document.body.innerHTML='<p style="text-align:center;padding:40px;color:#f87171">Not logged in. <a href="/">Login</a></p>';return}
+  currentUser=JSON.parse(cu);
+  document.getElementById('logoutBtn').addEventListener('click',function(){sessionStorage.removeItem('carshow_user');window.location.href='/'});
+  fetch('/api/dummy-users').then(function(r){return r.json()}).then(function(list){
+    var me=list.find(function(x){return x.username===currentUser.username});
+    if(!me){document.getElementById('msg').textContent='Profile not found. Ask admin to create your account.';return}
+    document.getElementById('profileForm').style.display='block';
+    document.getElementById('pUser').value=me.username;
+    document.getElementById('pDisplay').value=me.display||'';
+    document.getElementById('pRole').value=me.role;
+    document.getElementById('pEmail').value=me.email||'';
+    document.getElementById('pInsta').value=me.instagram||'';
+    document.getElementById('pBlurb').value=me.blurb||'';
+    document.getElementById('pCar').value=me.car||'';
+    document.getElementById('pPhoto').value=me.photo||'';
+    var offerRoles=['vendor','sponsor','vip','super_user'];
+    if(offerRoles.indexOf(me.role)<0) document.getElementById('offeringsCard').style.display='none';
+    document.querySelectorAll('.pOffer').forEach(function(c){c.checked=(me.offering||'').split(',').indexOf(c.value)>=0});
+  });
+}
+function handlePhoto(){var f=document.getElementById('pPhotoFile').files[0];if(!f)return;var r=new FileReader();r.onload=function(e){document.getElementById('pPhoto').value=e.target.result};r.readAsDataURL(f)}
+document.getElementById('profileForm').addEventListener('submit',function(e){
+  e.preventDefault();var msg=document.getElementById('formMsg');msg.textContent='';
+  var pw=document.getElementById('pPass').value,pw2=document.getElementById('pPassConfirm').value;
+  if(pw&&pw!==pw2){msg.textContent='Passwords do not match';msg.className='error';return}
+  var offers=[];document.querySelectorAll('.pOffer:checked').forEach(function(c){offers.push(c.value)});
+  var data={display:document.getElementById('pDisplay').value.trim(),email:document.getElementById('pEmail').value.trim(),instagram:document.getElementById('pInsta').value.trim(),blurb:document.getElementById('pBlurb').value.trim(),car:document.getElementById('pCar').value.trim(),photo:document.getElementById('pPhoto').value.trim(),offering:offers.join(',')};
+  var un=currentUser.username;
+  fetch('/api/dummy-users/'+un,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){return r.json()}).then(function(){
+    msg.textContent='Profile updated!';msg.className='success';
+    if(pw){fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:un+'@carshow.app',username:un,password:pw,role:currentUser.role})})}
+  });
+});
+window.addEventListener('load',load);
+</script></body></html>
