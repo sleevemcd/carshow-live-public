@@ -458,6 +458,9 @@ app.post('/api/location', (req, res) => {
     users[username].lat = lat;
     users[username].lng = lng;
     users[username].last_seen = Date.now();
+    // Also update dummy user data so admin panel shows real GPS
+    var du = demoUsers.find(u => u.username === username);
+    if (du) { du.lat = lat; du.lng = lng; }
     users[username].last_seen = Date.now();
     users[username].online = true;
     if (event_id) users[username].event_id = event_id;
