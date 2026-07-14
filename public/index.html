@@ -213,7 +213,7 @@ input,textarea{outline:none}
 <script src="/js/vendor.js"></script>
 <script src="/js/gpx.js"></script>
 <script>
-let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null;
+let map, currentUser=null, currentEvent=null, heatLayer=null, currentFollowTarget=null, myMarker=null;
 let userMarkers={}, vendorMarkers={}, spotMarkers={}, pollingTimers=[];
 function getEventId(){return window._dataEventId||(currentEvent?currentEvent.parent_event_id||currentEvent.id:'demo-event-1')}
 let showingNearby=false, locationWatchId=null, myLocation=null;
@@ -333,7 +333,7 @@ function initControls(){
     fetch('/api/location/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
     // Sync HQ toggle
     var ht=$('#hqLocationToggle');if(ht)ht.checked=on;var hs=ht?ht.parentElement.querySelector('span'):null;if(hs)hs.textContent=on?'On':'Off';
-    if(on){if(!locationWatchId)setupLocation()}else{if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(userMarkers._me){map.removeLayer(userMarkers._me);delete userMarkers._me}myLocation=null}
+    if(on){if(!locationWatchId)setupLocation()}else{if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(myMarker){map.removeLayer(myMarker);myMarker=null}myLocation=null}
   });
   $('#closeVendorPopup').addEventListener('click',()=>hide($('#vendorPopup')));
   $('#vpFollowBtn').addEventListener('click',function(){
@@ -401,8 +401,8 @@ function updateMyMarker(loc){
   var rc={admin:'#dc2626',organizer:'#f59e0b',sponsor:'#f59e0b',vendor:'#22c55e',vip:'#ec4899',registered_user:'#6366f1',user:'#06b6d4',attendee:'#06b6d4'};
   var c=rc[currentUser?.role]||'#6366f1';
   var icon=L.divIcon({className:'',html:'<div style="width:20px;height:20px;border-radius:50%;background:'+c+';border:3px solid #fff;box-shadow:0 0 12px '+c+';position:relative"><div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;color:#a5b4fc;white-space:nowrap;font-weight:600">YOU</div></div>',iconSize:[20,20],iconAnchor:[10,10]});
-  if(userMarkers._me){map.removeLayer(userMarkers._me)}
-  userMarkers._me=L.marker([loc.lat,loc.lng],{icon,zIndexOffset:200}).addTo(map);
+  if(myMarker)map.removeLayer(myMarker);
+  myMarker=L.marker([loc.lat,loc.lng],{icon,zIndexOffset:200}).addTo(map);
 }
 
 function setupLocation(){
@@ -421,7 +421,7 @@ function pollUsers(){
   fetch('/api/users/'+getEventId()).then(r=>r.json()).then(list=>{
     var heatPoints=[];
     var ids=new Set(list.map(u=>u.username));
-    Object.keys(userMarkers).forEach(k=>{if(k!=='_me'&&!ids.has(k)){map.removeLayer(userMarkers[k]);delete userMarkers[k]}});
+    Object.keys(userMarkers).forEach(k=>{if(!ids.has(k)){map.removeLayer(userMarkers[k]);delete userMarkers[k]}});
     var showRoles=['sponsor','vendor','vip','super_user'];
     var rc={sponsor:'#f59e0b',vendor:'#22c55e',vip:'#ec4899',super_user:'#a855f7'};
     list.forEach(u=>{
@@ -523,7 +523,7 @@ window.deleteDummyUser=function(username){if(confirm('Delete '+username+'?'))fet
 window.toggleDummyField=function(username,field,val){fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:val})}).then(()=>loadDummyUsers())};
 window.toggleDummyOffering=function(username){fetch('/api/dummy-users').then(r=>r.json()).then(list=>{var u=list.find(x=>x.username===username);if(u){var has=!!u.offering;var v=has?'':prompt('Offerings (comma-separated): swag,giveaway,merch,poker,photo',u.offering||'');if(v!==null)fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({offering:v})}).then(()=>loadDummyUsers())}})};
 function goBack(){if(currentUser){if(currentUser.role==='admin'){hide($('#app'));show($('#dashboardView'));loadDashboardEvents();return}hide($('#app'));show($('#eventHQ'));loadEventHQ()}}
-function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});sessionStorage.removeItem('carshow_user');pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));hide($('#eventHQ'));$('#loginScreen').style.display='flex';}
+function dashLogout(){if(currentUser)fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});sessionStorage.removeItem('carshow_user');pollingTimers.forEach(clearInterval);if(locationWatchId)navigator.geolocation.clearWatch(locationWatchId);if(map){try{Object.values(userMarkers).forEach(m=>map.removeLayer(m));Object.values(vendorMarkers).forEach(m=>map.removeLayer(m));Object.values(spotMarkers).forEach(m=>map.removeLayer(m));map.remove()}catch(e){}}if(myMarker)myMarker=null;userMarkers={};vendorMarkers={};spotMarkers={};pollingTimers=[];showingNearby=false;currentUser=null;currentEvent=null;map=null;myLocation=null;hide($('#app'));hide($('#dashboardView'));hide($('#eventHQ'));$('#loginScreen').style.display='flex';}
 function loadEventHQ(){
   fetch('/api/events').then(r=>r.json()).then(list=>{
     var master=list.filter(e=>!e.parent_event_id&&e.is_active);
@@ -562,7 +562,7 @@ function initHQControls(){
     // Sync map toggle
     var mt=$('#locationToggle');if(mt)mt.checked=on;
     if(on&&navigator.geolocation){navigator.geolocation.getCurrentPosition(function(p){fetch('/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username,lat:p.coords.latitude,lng:p.coords.longitude,event_id:currentEvent.id})})},function(){},{enableHighAccuracy:true,timeout:5000})}
-    if(!on){if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(userMarkers._me){map.removeLayer(userMarkers._me);delete userMarkers._me}myLocation=null}
+    if(!on){if(locationWatchId){clearInterval(locationWatchId);locationWatchId=null}if(myMarker){map.removeLayer(myMarker);myMarker=null}myLocation=null}
   });
   $('#hqDirBtn').addEventListener('click',()=>{window.location.href='/directory.html'});
 }
