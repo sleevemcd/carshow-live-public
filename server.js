@@ -186,6 +186,7 @@ const accounts = loadData('accounts', {}); // email -> { email, password, userna
 const spotLikes = loadData('spotLikes', {}); // spotId -> [usernames]
 const gpxTracks = loadData('gpxTracks', []);
 const gpxProgress = loadData('gpxProgress', {}); // username -> { trackId: { progress, completed } }
+const accessCodes = loadData("accessCodes", {}); // code -> { role, event_id, created }
 const USERS_EXPIRY_MS = 60 * 1000;
 
 // Account registration & login
@@ -194,9 +195,14 @@ app.post('/api/register', (req, res) => {
   if (!email || !username || !password) return res.status(400).json({ error: 'Email, username, and password required' });
   if (accounts[email]) return res.status(400).json({ error: 'Email already registered' });
   var userRole = role || 'user';
-  if (code && code.toUpperCase() === 'VIP') userRole = 'vip';
-  if (code && code.toUpperCase() === 'VENDOR') userRole = 'vendor';
-  if (code && code.toUpperCase() === 'SPONSOR') userRole = 'sponsor';
+  // Check access codes
+  if (code) {
+    var ac = accessCodes[code.toUpperCase()];
+    if (ac) { userRole = ac.role || 'user'; }
+    else if (code.toUpperCase() === 'VIP') userRole = 'vip';
+    else if (code.toUpperCase() === 'VENDOR') userRole = 'vendor';
+    else if (code.toUpperCase() === 'SPONSOR') userRole = 'sponsor';
+  }
   accounts[email] = { email, username, password: hash(password), role: userRole, created: new Date().toISOString() };
   // Also add to demo users list
   if (!demoUsers.find(u => u.username === username)) {
@@ -546,4 +552,8 @@ app.post('/api/follow', (req, res) => { var {username,follow}=req.body;if(!usern
 app.post('/api/unfollow', (req, res) => { var {username,follow}=req.body;if(follows[username])follows[username]=follows[username].filter(f=>f!==follow);res.json({following:follows[username]||[]})});
 app.get('/api/follows/:username', (req, res) => { res.json(follows[req.params.username]||[]); });
 
+
+app.get("/api/access-codes", (req,res) => { res.json(accessCodes); });
+app.post("/api/access-codes", (req,res) => { var {code,role,event_id}=req.body; if(!code||!role) return res.status(400).json({error:"code and role required"}); accessCodes[code.toUpperCase()]={role,event_id:event_id||"demo-event-1",created:new Date().toISOString()}; saveData("accessCodes",accessCodes); res.json(accessCodes); });
+app.delete("/api/access-codes/:code", (req,res) => { var c=req.params.code.toUpperCase(); delete accessCodes[c]; saveData("accessCodes",accessCodes); res.json({success:true}); });
 module.exports = app;
