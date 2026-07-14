@@ -229,9 +229,16 @@ function handleLogin(role){
   fetch('/api/dummy-users').then(r=>r.json()).then(users=>{
     var du=users.find(function(u){return u.username===name});
     if(du){doLogin(name,du.role);return}
-    // Check registered accounts
+    // Check registered accounts - validate password
+    var pw=$('#loginPassword').value;
     fetch('/api/accounts/'+name).then(r=>r.json()).then(function(acct){
-      if(acct&&!acct.error){doLogin(name,acct.role||'user');return}
+      if(acct&&!acct.error){
+        var pwHash='h_'+Math.abs(function(s){var h=0;for(var i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return h}(pw)).toString(36);
+        if(pw&&acct.password===pwHash){doLogin(name,acct.role||'user');return}
+        if(!pw&&!acct.password){doLogin(name,acct.role||'user');return}
+        $('#loginError').textContent='Wrong password';
+        return;
+      }
       $('#loginError').textContent='User does not exist. Create an account.';
     }).catch(function(){$('#loginError').textContent='User does not exist. Create an account.'});
   }).catch(function(){$('#loginError').textContent='User does not exist. Create an account.'});

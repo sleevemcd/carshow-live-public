@@ -9,7 +9,7 @@
 <label>Username</label><input type="text" id="fUsername" placeholder="e.g. bmwfanatic" />
 <div class="row"><div><label>Display</label><input type="text" id="fDisplay" /></div><div><label>Role</label><select id="fRole"><option value="attendee">Attendee</option><option value="user">User</option><option value="registered_user">Registered</option><option value="vip">VIP</option><option value="super_user">Super User</option><option value="vendor">Vendor</option><option value="sponsor">Sponsor</option></select></div></div>
 <label>Car</label><input type="text" id="fCar" placeholder="e.g. 2020 BMW M3" />
-<label>Profile Photo URL</label><input type="text" id="fPhoto" placeholder="https://..." />
+<label>Profile Photo</label><div style="display:flex;gap:8px"><input type="file" id="fPhotoFile" accept="image/*" style="flex:1;padding:8px;border:1px solid #27272a;border-radius:8px;background:#18181b;color:#d4d4d8;font-size:12px" onchange="handlePhotoUpload()" /><input type="text" id="fPhoto" placeholder="or paste URL" style="flex:1" /></div>
 <label>Instagram</label><input type="text" id="fInsta" placeholder="@username" />
 <label>Email</label><input type="email" id="fEmail" placeholder="user@example.com" />
 <label>Blurb</label><input type="text" id="fBlurb" placeholder="Short description" />
@@ -57,6 +57,12 @@ function editUser(username){fetch('/api/dummy-users').then(function(r){return r.
 function closeForm(){document.getElementById('modal').classList.remove('open')}
 function saveUser(){var offers=[];document.querySelectorAll('.fOffer:checked').forEach(function(c){offers.push(c.value)});var un=document.getElementById('fUsername').value.trim();var data={username:un,display:document.getElementById('fDisplay').value.trim(),role:document.getElementById('fRole').value,car:document.getElementById('fCar').value.trim(),photo:document.getElementById('fPhoto').value.trim(),instagram:document.getElementById('fInsta').value.trim(),email:document.getElementById('fEmail').value.trim(),blurb:document.getElementById('fBlurb').value.trim(),lat:parseFloat(document.getElementById('fLat').value)||40.5144,lng:parseFloat(document.getElementById('fLng').value)||-111.4764,event_id:'demo-event-1',offering:offers.join(','),locationEnabled:document.getElementById('fLocOn').checked};if(!un){alert('Username required');return}var m=editingUser?'PUT':'POST';var url=editingUser?'/api/dummy-users/'+editingUser:'/api/dummy-users';fetch(url,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){if(!r.ok){alert('Server error: '+r.status);return}closeForm();loadUsers()}).catch(function(e){alert('Save failed: '+e.message)})}
 function delUser(username){if(confirm('Delete '+username+'?')){fetch('/api/dummy-users/'+username,{method:'DELETE'}).then(function(){loadUsers()})}}
+function handlePhotoUpload(){
+  var f=document.getElementById('fPhotoFile').files[0];if(!f)return;
+  var reader=new FileReader();
+  reader.onload=function(e){document.getElementById('fPhoto').value=e.target.result};
+  reader.readAsDataURL(f);
+}
 function toggleLoc(username,on){fetch('/api/dummy-users/'+username,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({locationEnabled:!on})}).then(function(){loadUsers()})}
 document.getElementById('filterRole').addEventListener('change',loadUsers);
 document.getElementById('filterSearch').addEventListener('input',loadUsers);

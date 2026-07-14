@@ -1,8 +1,9 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>GPX Route Management</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#09090b;color:#f4f4f5;padding:20px}h1{font-size:20px;margin-bottom:16px}button{font-family:inherit;cursor:pointer;border:none}.btn{padding:6px 12px;border-radius:8px;font-size:12px}.btn-primary{background:#4f46e5;color:#fff}.btn-outline{background:transparent;border:1px solid #27272a;color:#d4d4d8}.btn-danger{background:#dc2626;color:#fff;padding:4px 10px;font-size:11px}.btn-sm{font-size:11px;padding:4px 10px}.toolbar{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap}input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #27272a;background:#18181b;color:#d4d4d8;font-size:13px;margin-bottom:10px;outline:none;font-family:inherit}textarea{resize:vertical;min-height:60px}.card{padding:14px;border:1px solid #27272a;border-radius:12px;margin-bottom:10px;background:#18181b}.card h3{font-size:15px;margin-bottom:4px}.card p{font-size:12px;color:#71717a}.card .actions{margin-top:8px;display:flex;gap:6px}.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:16px}.modal-overlay.open{display:flex}.modal{width:100%;max-width:440px;background:#18181b;border:1px solid #27272a;border-radius:16px;padding:20px}.modal h2{font-size:16px;margin-bottom:12px}.modal .btns{display:flex;gap:8px;margin-top:12px}.modal .btns button{flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:600}</style></head><body>
 <h1>🏔 GPX Routes</h1>
-<div class="toolbar"><button class="btn btn-outline btn-sm" onclick="history.back()">← Dashboard</button><button class="btn btn-primary" onclick="openForm()">+ Import Route</button><span id="count" style="font-size:12px;color:#71717a"></span></div>
+<div class="toolbar"><button class="btn btn-outline btn-sm" onclick="history.back()">← Dashboard</button><button class="btn btn-primary" onclick="openForm()">+ Import Route</button><button class="btn btn-outline btn-sm" onclick="loadLeaderboard()">🏆 Leaderboard</button><span id="count" style="font-size:12px;color:#71717a"></span></div>
 <div id="list"></div>
+<div id="leaderboard" style="display:none;margin-top:16px"></div>
 <div class="modal-overlay" id="modal"><div class="modal">
 <h2 id="modalTitle">Import Route</h2>
 <label style="font-size:12px;color:#71717a;display:block;margin-bottom:4px">Route Name</label><input type="text" id="fName" placeholder="e.g. Alpine Loop Cruise" />
@@ -48,5 +49,23 @@ function saveRoute(){
   .then(function(r){return r.json()}).then(function(){closeForm();load()});
 }
 function del(id){if(confirm('Delete?')){fetch('/api/gpx/'+id,{method:'DELETE'}).then(function(){load()})}}
+function loadLeaderboard(){
+  var lb=document.getElementById('leaderboard');
+  if(lb.style.display==='block'){lb.style.display='none';return}
+  lb.style.display='block';lb.innerHTML='<p style="color:#a5b4fc;text-align:center">Loading...</p>';
+  fetch('/api/gpx/leaderboard').then(function(r){return r.json()}).then(function(board){
+    if(!board.length){lb.innerHTML='<p style="color:#52525b;text-align:center;padding:20px">No completions yet</p>';return}
+    var h='<h2 style="font-size:16px;margin-bottom:12px">🏆 Route Leaderboard</h2>';
+    for(var i=0;i<board.length;i++){
+      var b=board[i];h+='<div class="card"><h3>'+esc(b.trackName)+'</h3>';
+      for(var j=0;j<b.finishers.length;j++){
+        var f=b.finishers[j];var mins=Math.floor(f.time/60000);var secs=Math.floor((f.time%60000)/1000);
+        h+='<div style="padding:4px 0;font-size:12px;color:'+(j===0?'#22c55e':'#a1a1aa')+'">#'+(j+1)+' '+esc(f.username)+' — '+mins+'m '+secs+'s</div>';
+      }
+      h+='</div>';
+    }
+    lb.innerHTML=h;
+  });
+}
 window.addEventListener('load',load);
 </script></body></html>
