@@ -128,7 +128,6 @@ var ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
 function randomCard(){ return { suit: suits[Math.floor(Math.random()*4)], rank: ranks[Math.floor(Math.random()*13)] }; }
 app.get("/api/poker/hand/:username", (req,res) => { var h=pokerHands[req.params.username]||{cards:[]}; res.json(h); });
 app.post("/api/poker/collect", (req,res) => { var {username,vendor_username}=req.body; if(!username||!vendor_username) return res.status(400).json({error:"required"}); var v=demoUsers.find(u=>u.username===vendor_username&&u.offering&&u.offering.split(",").includes("poker")); if(!v) return res.status(400).json({error:"Vendor not offering poker"}); if(!pokerHands[username]) pokerHands[username]={cards:[]}; if(pokerHands[username].cards.length>=5) return res.status(400).json({error:"Hand full (max 5)"}); var has=pokerHands[username].cards.filter(function(c){return c.from===vendor_username}); if(has.length) return res.status(400).json({error:"Already got card from this vendor"}); var card=randomCard(); card.from=vendor_username; card.collected_at=Date.now(); pokerHands[username].cards.push(card); saveData("pokerHands",pokerHands); res.json({card,hand:pokerHands[username].cards}); });
-  addActivity("poker", username + " got a poker card from " + vendor_username);
 app.get("/api/poker/leaderboard", (req,res) => {
   var rankOrder = {"2":1,"3":2,"4":3,"5":4,"6":5,"7":6,"8":7,"9":8,"10":9,"J":10,"Q":11,"K":12,"A":13};
   function evalHand(cards){
@@ -187,15 +186,7 @@ const accounts = loadData('accounts', {}); // email -> { email, password, userna
 const spotLikes = loadData('spotLikes', {}); // spotId -> [usernames]
 const gpxTracks = loadData('gpxTracks', []);
 const gpxProgress = loadData('gpxProgress', {}); // username -> { trackId: { progress, completed } }
-const activities = loadData('activities', []);
-const notifSettings = loadData('notifSettings', { follows: true, events: true, poker: true, spots: true, likes: true });
 const USERS_EXPIRY_MS = 60 * 1000;
-
-function addActivity(type, message){
-  activities.unshift({ type, message, time: new Date().toISOString() });
-  if (activities.length > 100) activities.pop();
-  saveData('activities', activities);
-}
 
 // Account registration & login
 app.post('/api/register', (req, res) => {
@@ -422,7 +413,6 @@ app.post('/api/spots', (req, res) => {
   const expiry = (spot_type === 'car_spot') ? 30 * 60 * 1000 : (spot_type === 'food') ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   const s = { id: 's-' + Date.now(), event_id, label, description: description || '', lat, lng, spot_type: spot_type || 'spot', username: username || 'anonymous', likes: 0, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + expiry).toISOString() };
   spots.push(s);
-  addActivity("spot", username + " dropped a pin: " + (label||""));
   res.json(s);
 });
 
@@ -435,7 +425,6 @@ app.post('/api/spots/:id/like', (req, res) => {
   spotLikes[req.params.id].push(username);
   s.likes = spotLikes[req.params.id].length;
   saveData('spotLikes', spotLikes);
-  addActivity('like', username + ' liked a spot');
   res.json({ likes: s.likes });
 });
 
@@ -535,10 +524,8 @@ app.post("/api/gpx/create", (req,res) => {
 });
 app.delete("/api/gpx/:id", (req,res) => { var i=gpxTracks.findIndex(t=>t.id===req.params.id); if(i>=0)gpxTracks.splice(i,1); saveData("gpxTracks",gpxTracks); res.json({success:true}); });
 app.get("/api/gpx/progress/:username", (req,res) => { res.json(gpxProgress[req.params.username]||{}); });
-app.post("/api/gpx/progress", (req,res) => { var {username,trackId,progress,completed,pointIndex}=req.body; if(!username||!trackId) return res.status(400).json({error:"required"}); if(!gpxProgress[username])gpxProgress[username]={}; gpxProgress[username][trackId]={progress:progress||0,completed:completed||false,pointIndex:pointIndex||0,updated:Date.now(),started:gpxProgress[username][trackId]?.started||Date.now()};if(completed)addActivity("gpx",username+" completed "+trackId); saveData("gpxProgress",gpxProgress); res.json(gpxProgress[username]); });
+app.post("/api/gpx/progress", (req,res) => { var {username,trackId,progress,completed,pointIndex}=req.body; if(!username||!trackId) return res.status(400).json({error:"required"}); if(!gpxProgress[username])gpxProgress[username]={}; gpxProgress[username][trackId]={progress:progress||0,completed:completed||false,pointIndex:pointIndex||0,updated:Date.now()}; saveData("gpxProgress",gpxProgress); res.json(gpxProgress[username]); });
   const PORT = process.env.PORT || 3000;
-
-app.get("/api/gpx/leaderboard", (req,res) => { var board=gpxTracks.map(t=>{var f=Object.keys(gpxProgress).filter(u=>gpxProgress[u][t.id]&&gpxProgress[u][t.id].completed).map(u=>({username:u,time:gpxProgress[u][t.id].updated-gpxProgress[u][t.id].started})).sort((a,b)=>a.time-b.time); return{trackId:t.id,trackName:t.name,finishers:f.slice(0,10)}}).filter(b=>b.finishers.length>0); res.json(board); });
   app.listen(PORT, () => console.log(`CarShow Live running on http://localhost:${PORT}`));
 }
 
@@ -550,8 +537,4 @@ app.post('/api/follow', (req, res) => { var {username,follow}=req.body;if(!usern
 app.post('/api/unfollow', (req, res) => { var {username,follow}=req.body;if(follows[username])follows[username]=follows[username].filter(f=>f!==follow);res.json({following:follows[username]||[]})});
 app.get('/api/follows/:username', (req, res) => { res.json(follows[req.params.username]||[]); });
 
-
-app.get("/api/activities", (req,res) => { res.json(activities.slice(0,30)); });
-app.get("/api/notif-settings", (req,res) => { res.json(notifSettings); });
-app.put("/api/notif-settings", (req,res) => { Object.assign(notifSettings, req.body); saveData("notifSettings",notifSettings); res.json(notifSettings); });
 module.exports = app;
