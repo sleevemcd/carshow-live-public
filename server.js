@@ -198,7 +198,7 @@ app.post('/api/register', (req, res) => {
   // Check access codes
   if (code) {
     var ac = accessCodes[code.toUpperCase()];
-    if (ac) { userRole = ac.role || 'user'; }
+    if (ac) { userRole = ac.role || 'user'; var eventId = ac.event_id || 'demo-event-1'; }
     else if (code.toUpperCase() === 'VIP') userRole = 'vip';
     else if (code.toUpperCase() === 'VENDOR') userRole = 'vendor';
     else if (code.toUpperCase() === 'SPONSOR') userRole = 'sponsor';
@@ -206,7 +206,7 @@ app.post('/api/register', (req, res) => {
   accounts[email] = { email, username, password: hash(password), role: userRole, created: new Date().toISOString() };
   // Also add to demo users list
   if (!demoUsers.find(u => u.username === username)) {
-    demoUsers.push({ username, role: userRole, lat: 40.5144, lng: -111.4764, event_id: 'demo-event-1', locationEnabled: false, blurb: '', offering: '', car: '', instagram: '', car_photo: '', email: email, photo: '', display: username });
+    demoUsers.push({ username, role: userRole, lat: 40.5144, lng: -111.4764, event_id: eventId || 'demo-event-1', locationEnabled: false, blurb: '', offering: '', car: '', instagram: '', car_photo: '', email: email, photo: '', display: username });
   }
   saveData('accounts', accounts);
   saveData('demoUsers', demoUsers);

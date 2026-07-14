@@ -256,8 +256,8 @@ function doLogin(email,role){
   fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:email.split('@')[0],role,event_id:eid})})
   .then(r=>r.json()).then(data=>{
     if(data.error){$('#loginError').textContent=data.error;return}
-    currentUser={username:data.username,role:data.role,event_id:data.event.id};
-    currentEvent=data.event;
+    currentUser={username:data.username,role:data.role,event_id:data.event?data.event.id:currentEvent?.id||'demo-event-1'};
+    currentEvent=data.event||currentEvent;
     sessionStorage.setItem('carshow_user',JSON.stringify(currentUser));
     hide($('#loginScreen'));
     if(currentUser.role==='admin'){show($('#dashboardView'));loadDashboardEvents();initDashboardControls()}
