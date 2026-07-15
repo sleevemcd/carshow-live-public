@@ -523,14 +523,19 @@ app.post("/api/gpx/create", (req,res) => {
   if (!points || !points.length) {
     if (gpxData) {
       points = [];
-      var reLat = /lat="([^"]+)"/g;
-      var reLon = /lon="([^"]+)"/g;
-      var pts = gpxData.match(/<trkpt[^>]*>/g) || [];
+      var pts = gpxData.match(/<(?:\w+:)?(?:trkpt|rtept|wpt)[^>]*>/g) || [];
       pts.forEach(function(pt){
-        var lm = reLat.exec(pt); var lnm = reLon.exec(pt);
+        var lm = pt.match(/lat="([^"]+)"/); var lnm = pt.match(/lon="([^"]+)"/);
         if (lm && lnm) points.push([parseFloat(lm[1]), parseFloat(lnm[1])]);
-        reLat.lastIndex = 0; reLon.lastIndex = 0;
       });
+      // Also try parsing coordinates from <trkpt> with no quotes (rare format)
+      if (!points.length) {
+        pts = gpxData.match(/<(?:\w+:)?(?:trkpt|rtept|wpt)\s+lat=([^\s>]+)\s+lon=([^\s>]+)/g) || [];
+        pts.forEach(function(pt){
+          var m = pt.match(/lat=([^\s>]+)\s+lon=([^\s>]+)/);
+          if (m) points.push([parseFloat(m[1]), parseFloat(m[2])]);
+        });
+      }
     }
     if (!points.length) return res.status(400).json({error:"points required"});
   }
