@@ -313,8 +313,6 @@ function initMap(){
     setupHeatmap();loadSpots();setupLocation();setupPolling();initControls();loadEventMarkers();pollUsers();pollVendors();pollSpots();loadGPXTracks();
   }catch(e){showError('Map error: '+e.message)}
 }
-function loadGPXTracks(){} // in gpx.js
-
 function initControls(){
   var role=currentUser?.role;
   $('#backBtn').addEventListener('click',goBack);

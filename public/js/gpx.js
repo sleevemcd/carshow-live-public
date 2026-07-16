@@ -1,10 +1,12 @@
 function loadGPXTracks(){
   if(window._gpxLayers){window._gpxLayers.forEach(function(l){map.removeLayer(l)});}
   window._gpxLayers=[];
+  var hidden=JSON.parse(localStorage.getItem('gpx_hidden')||'[]');
   fetch('/api/gpx').then(function(r){return r.json()}).then(function(tracks){
     if(!tracks||!tracks.length)return;
     var colors=['#6366f1','#22c55e','#f59e0b','#ef4444','#ec4899','#06b6d4','#a855f7'];
     tracks.forEach(function(t,i){
+      if(hidden.includes(t.id))return;
       var latlngs=t.points.map(function(p){return[p[0],p[1]]});
       var poly=L.polyline(latlngs,{color:colors[i%colors.length],weight:4,opacity:0.7}).addTo(map);
       poly.bindPopup('<b>'+esc(t.name)+'</b><br>'+esc(t.description||'')+'<br><small id="gpxProg_'+t.id+'"></small>');

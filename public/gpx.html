@@ -13,13 +13,23 @@
 <div class="btns"><button class="btn btn-outline" onclick="closeForm()">Cancel</button><button class="btn btn-primary" onclick="saveRoute()">Save Route</button></div>
 </div></div>
 <script>
+function getHidden(){return JSON.parse(localStorage.getItem('gpx_hidden')||'[]')}
+function setHidden(ids){localStorage.setItem('gpx_hidden',JSON.stringify(ids));load()}
+function toggleVis(id){
+  var h=getHidden();
+  if(h.includes(id))h=h.filter(function(x){return x!==id});
+  else h.push(id);
+  setHidden(h);
+}
 function load(){
   fetch('/api/gpx').then(function(r){return r.json()}).then(function(list){
     document.getElementById('count').textContent=list.length+' routes';
+    var hidden=getHidden();
     var h='';
     for(var i=0;i<list.length;i++){
       var t=list[i];var dist=calcDist(t.points);
-      h+='<div class="card"><h3>'+esc(t.name)+'</h3><p>'+esc(t.description||'')+'</p><p style="font-size:11px;color:#52525b;margin-top:4px">'+t.points.length+' points · ~'+dist.toFixed(1)+' km</p><div class="actions"><button class="btn-danger btn-sm" onclick="del(\''+t.id+'\')">Delete</button></div></div>';
+      var vis=!hidden.includes(t.id);
+      h+='<div class="card" style="opacity:'+(vis?'1':'0.4')+'"><h3>'+esc(t.name)+'</h3><p>'+esc(t.description||'')+'</p><p style="font-size:11px;color:#52525b;margin-top:4px">'+t.points.length+' points · ~'+dist.toFixed(1)+' km</p><div class="actions"><button class="btn-sm '+(vis?'btn-outline':'btn-primary')+'" onclick="toggleVis(\''+t.id+'\')">'+(vis?'Hide':'Show')+'</button><button class="btn-danger btn-sm" onclick="del(\''+t.id+'\')">Delete</button></div></div>';
     }
     document.getElementById('list').innerHTML=h||'<p style="color:#52525b;text-align:center;padding:40px">No routes</p>';
   });
