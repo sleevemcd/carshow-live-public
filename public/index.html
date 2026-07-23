@@ -282,7 +282,6 @@ function initLogin(){
   $('#loginBtn').addEventListener('click',()=>handleLogin('user'));
   $('#loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();handleLogin('user')}});
   $('#loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();handleLogin('user')}});
-  ['organizer','sponsor','vendor','vip','registered_user','user'].forEach(r=>{$('.login-'+r).addEventListener('click',()=>handleLogin(r))});
   $('#showReg').addEventListener('click',function(e){e.preventDefault();$('#regBox').style.display=($('#regBox').style.display==='none'||!$('#regBox').style.display)?'block':'none'});
   $('#regBtn').addEventListener('click',function(){
     var em=$('#regEmail').value.trim(),un=$('#regUser').value.trim(),pw=$('#regPass').value,co=$('#regCode').value.trim();
