@@ -10,7 +10,14 @@ function loadGPXTracks(){
       var latlngs=t.points.map(function(p){return[p[0],p[1]]});
       var poly=L.polyline(latlngs,{color:colors[i%colors.length],weight:4,opacity:0.7}).addTo(map);
       poly.bindPopup('<b>'+esc(t.name)+'</b><br>'+esc(t.description||'')+'<br><small id="gpxProg_'+t.id+'"></small>');
-      poly.on('click',function(){if(currentUser&&myLocation)gpxCheck(t.id)});
+      poly.on('click',function(){
+        document.getElementById('gpxName').textContent=t.name;
+        document.getElementById('gpxDesc').textContent=t.description||'';
+        var pEl=document.getElementById('gpxProg_'+t.id);
+        document.getElementById('gpxStat').textContent=pEl?pEl.textContent:t.points.length+' points';
+        document.getElementById('gpxPopup').style.display='block';
+        if(currentUser&&window.myLocation)gpxCheck(t.id)
+      });
       window._gpxLayers.push(poly);
     });
     setTimeout(function(){tracks.forEach(function(t){gpxCheck(t.id)})},3000);
