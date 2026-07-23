@@ -7,7 +7,7 @@ const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '10mb' }));
 
-const DATA_DIR = '/data';
+const DATA_DIR = process.env.DATA_DIR || '/data';
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
 
 // Simple password hash (for MVP - swap with bcrypt for production)

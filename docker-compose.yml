@@ -1,7 +1,19 @@
 version: "3.8"
+
 services:
   carshow:
     build: .
     ports:
       - "3000:3000"
+    volumes:
+      - /volume1/docker/1/carshow-data:/data
+    environment:
+      - DATA_DIR=/data
     restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - carshow
