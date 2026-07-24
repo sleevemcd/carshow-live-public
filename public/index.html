@@ -90,15 +90,7 @@ input,textarea{outline:none}
 <div style="margin-top:14px;text-align:center">
 <a href="#" id="showReg" style="color:#a5b4fc;font-size:13px;text-decoration:none">Create Account</a>
 </div>
-<div id="regBox" style="display:none;margin-top:10px;padding:12px;border-radius:12px;border:1px solid #27272a;background:#18181b;text-align:left">
-<p style="font-size:12px;color:#71717a;margin-bottom:8px">Create Account</p>
-<input type="email" id="regEmail" placeholder="Email" style="margin-bottom:6px" />
-<input type="text" id="regUser" placeholder="Username" style="margin-bottom:6px" />
-<input type="password" id="regPass" placeholder="Password" style="margin-bottom:6px" />
-<input type="text" id="regCode" placeholder="Event Code (optional)" style="margin-bottom:8px" maxlength="20" />
-<button id="regBtn" class="btn-outline btn-sm" style="width:100%">Register</button>
-<div id="regError" class="error"></div>
-</div>
+
 </div>
 </div>
 
@@ -282,15 +274,7 @@ function initLogin(){
   $('#loginBtn').addEventListener('click',()=>handleLogin('user'));
   $('#loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();handleLogin('user')}});
   $('#loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();handleLogin('user')}});
-  $('#showReg').addEventListener('click',function(e){e.preventDefault();$('#regBox').style.display=($('#regBox').style.display==='none'||!$('#regBox').style.display)?'block':'none'});
-  $('#regBtn').addEventListener('click',function(){
-    var em=$('#regEmail').value.trim(),un=$('#regUser').value.trim(),pw=$('#regPass').value,co=$('#regCode').value.trim();
-    if(!em||!un||!pw){$('#regError').textContent='All fields required';return}
-    var role='user';if(co.toUpperCase()==='VIP')role='vip';if(co.toUpperCase()==='VENDOR')role='vendor';if(co.toUpperCase()==='SPONSOR')role='sponsor';
-    fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,username:un,password:pw,role:role,code:co})})
-    .then(r=>r.json()).then(d=>{if(d.error)$('#regError').textContent=d.error;else{$('#regError').textContent='Created! Login as '+un;$('#regBox').style.display='none';$('#loginEmail').value=un}})
-    .catch(function(){$('#regError').textContent='Failed'});
-  });
+  $('#showReg').addEventListener('click',function(e){e.preventDefault();window.location.href='/login.html'});
 }
 function showError(msg){
   var el=document.createElement('div');
